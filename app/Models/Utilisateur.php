@@ -30,6 +30,7 @@ class Utilisateur extends Authenticatable
      * @var array<int, string>
      */
     protected $fillable = [
+        'matricule',
         'nom_complet',
         'email',
         'mot_de_passe',
@@ -107,6 +108,14 @@ class Utilisateur extends Authenticatable
     }
 
     /**
+     * Scope a query to filter by matricule.
+     */
+    public function scopeByMatricule($query, $matricule)
+    {
+        return $query->where('matricule', $matricule);
+    }
+
+    /**
      * Check if user has a specific role.
      */
     public function hasRole($role)
@@ -120,5 +129,31 @@ class Utilisateur extends Authenticatable
     public function isActif()
     {
         return $this->statut === 'actif';
+    }
+
+    /**
+     * Generate a unique matricule.
+     */
+    public static function generateMatricule()
+    {
+        do {
+            $matricule = str_pad(random_int(1, 9999999999), 10, '0', STR_PAD_LEFT);
+        } while (self::where('matricule', $matricule)->exists());
+
+        return $matricule;
+    }
+
+    /**
+     * Boot the model.
+     */
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::creating(function ($utilisateur) {
+            if (empty($utilisateur->matricule)) {
+                $utilisateur->matricule = self::generateMatricule();
+            }
+        });
     }
 }

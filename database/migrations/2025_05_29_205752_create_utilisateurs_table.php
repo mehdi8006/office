@@ -13,6 +13,7 @@ return new class extends Migration
     {
         Schema::create('utilisateurs', function (Blueprint $table) {
             $table->id('id_utilisateur');
+            $table->string('matricule', 10)->unique();
             $table->string('nom_complet');
             $table->string('email')->unique();
             $table->string('mot_de_passe');
@@ -22,6 +23,7 @@ return new class extends Migration
             $table->timestamps();
             
             // Add indexes for better performance
+            $table->index('matricule');
             $table->index('email');
             $table->index('role');
             $table->index('statut');
