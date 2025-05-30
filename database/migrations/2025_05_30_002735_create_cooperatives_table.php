@@ -13,17 +13,23 @@ return new class extends Migration
     {
         Schema::create('cooperatives', function (Blueprint $table) {
             $table->id('id_cooperative');
+            $table->string('matricule', 10)->unique();
             $table->string('nom_cooperative');
             $table->text('adresse');
             $table->string('telephone');
             $table->string('email')->unique();
             $table->enum('statut', ['actif', 'inactif'])->default('actif');
+            $table->unsignedBigInteger('responsable_id')->nullable();
             $table->timestamps();
             
+            // Foreign key constraint
+            $table->foreign('responsable_id')->references('id_utilisateur')->on('utilisateurs')->onDelete('set null');
+            
             // Add indexes for better performance
-            $table->index('nom_cooperative');
+            $table->index('matricule');
             $table->index('email');
             $table->index('statut');
+            $table->index('responsable_id');
         });
     }
 

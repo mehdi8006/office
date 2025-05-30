@@ -29,22 +29,35 @@ class Cooperative extends Model
      * @var array<int, string>
      */
     protected $fillable = [
+        'matricule',
         'nom_cooperative',
         'adresse',
         'telephone',
         'email',
         'statut',
+        'responsable_id',
     ];
 
     /**
      * The attributes that should be cast.
      *
-     * @var array<string, string>
+     * @return array<string, string>
      */
-    protected $casts = [
-        'created_at' => 'datetime',
-        'updated_at' => 'datetime',
-    ];
+    protected function casts(): array
+    {
+        return [
+            'created_at' => 'datetime',
+            'updated_at' => 'datetime',
+        ];
+    }
+
+    /**
+     * Get the responsable (user) of the cooperative.
+     */
+    public function responsable()
+    {
+        return $this->belongsTo(Utilisateur::class, 'responsable_id', 'id_utilisateur');
+    }
 
     /**
      * Scope a query to only include active cooperatives.
@@ -63,27 +76,11 @@ class Cooperative extends Model
     }
 
     /**
-     * Scope a query to filter by status.
+     * Scope a query to filter by matricule.
      */
-    public function scopeByStatut($query, $statut)
+    public function scopeByMatricule($query, $matricule)
     {
-        return $query->where('statut', $statut);
-    }
-
-    /**
-     * Scope a query to search cooperatives by name.
-     */
-    public function scopeSearchByName($query, $search)
-    {
-        return $query->where('nom_cooperative', 'like', '%' . $search . '%');
-    }
-
-    /**
-     * Scope a query to search cooperatives by email.
-     */
-    public function scopeSearchByEmail($query, $search)
-    {
-        return $query->where('email', 'like', '%' . $search . '%');
+        return $query->where('matricule', $matricule);
     }
 
     /**
@@ -103,42 +100,37 @@ class Cooperative extends Model
     }
 
     /**
-     * Activate the cooperative.
+     * Generate a unique matricule for cooperative.
      */
-    public function activate()
+    public static function generateMatricule()
     {
-        $this->update(['statut' => 'actif']);
+        do {
+            // Generate matricule with format: COOP + 6 digits
+            $matricule = 'COOP' . str_pad(random_int(1, 999999), 6, '0', STR_PAD_LEFT);
+        } while (self::where('matricule', $matricule)->exists());
+
+        return $matricule;
     }
 
     /**
-     * Deactivate the cooperative.
+     * Get the full name with matricule.
      */
-    public function deactivate()
+    public function getFullNameAttribute()
     {
-        $this->update(['statut' => 'inactif']);
+        return $this->matricule . ' - ' . $this->nom_cooperative;
     }
 
     /**
-     * Get the cooperative's status in a human-readable format.
+     * Boot the model.
      */
-    public function getStatutLabelAttribute()
+    protected static function boot()
     {
-        return $this->statut === 'actif' ? 'Actif' : 'Inactif';
-    }
+        parent::boot();
 
-    /**
-     * Get the cooperative's formatted creation date.
-     */
-    public function getFormattedCreatedAtAttribute()
-    {
-        return $this->created_at->format('d/m/Y H:i');
-    }
-
-    /**
-     * Get the cooperative's formatted update date.
-     */
-    public function getFormattedUpdatedAtAttribute()
-    {
-        return $this->updated_at->format('d/m/Y H:i');
+        static::creating(function ($cooperative) {
+            if (empty($cooperative->matricule)) {
+                $cooperative->matricule = self::generateMatricule();
+            }
+        });
     }
 }

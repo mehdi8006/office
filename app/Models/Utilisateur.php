@@ -156,4 +156,8 @@ class Utilisateur extends Authenticatable
             }
         });
     }
+    public function cooperatives()
+    {
+        return $this->hasMany(Cooperative::class, 'responsable_id', 'id_utilisateur');
+    }
 }

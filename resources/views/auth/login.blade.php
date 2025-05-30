@@ -367,15 +367,7 @@
             }
         }
 
-        // Add loading state to form submission
-        document.querySelector('.login-form').addEventListener('submit', function() {
-            const button = document.getElementById('loginBtn');
-            const buttonText = document.getElementById('buttonText');
-            
-            button.classList.add('loading');
-            button.disabled = true;
-            buttonText.textContent = 'جاري تسجيل الدخول...';
-        });
+       
     </script>
 </body>
 </html>
