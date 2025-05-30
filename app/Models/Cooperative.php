@@ -60,6 +60,41 @@ class Cooperative extends Model
     }
 
     /**
+     * Get all members of the cooperative.
+     */
+    public function membres()
+    {
+        return $this->hasMany(MembreEleveur::class, 'id_cooperative', 'id_cooperative');
+    }
+
+    /**
+     * Get only active members of the cooperative.
+     */
+    public function membresActifs()
+    {
+        return $this->hasMany(MembreEleveur::class, 'id_cooperative', 'id_cooperative')
+                    ->where('statut', 'actif');
+    }
+
+    /**
+     * Get only inactive members of the cooperative.
+     */
+    public function membresInactifs()
+    {
+        return $this->hasMany(MembreEleveur::class, 'id_cooperative', 'id_cooperative')
+                    ->where('statut', 'inactif');
+    }
+
+    /**
+     * Get only deleted members of the cooperative.
+     */
+    public function membresSupprimes()
+    {
+        return $this->hasMany(MembreEleveur::class, 'id_cooperative', 'id_cooperative')
+                    ->where('statut', 'suppression');
+    }
+
+    /**
      * Scope a query to only include active cooperatives.
      */
     public function scopeActif($query)
@@ -84,6 +119,19 @@ class Cooperative extends Model
     }
 
     /**
+     * Scope to include cooperatives with their member counts.
+     */
+    public function scopeWithMemberCounts($query)
+    {
+        return $query->withCount([
+            'membres',
+            'membresActifs',
+            'membresInactifs',
+            'membresSupprimes'
+        ]);
+    }
+
+    /**
      * Check if cooperative is active.
      */
     public function isActif()
@@ -97,6 +145,38 @@ class Cooperative extends Model
     public function isInactif()
     {
         return $this->statut === 'inactif';
+    }
+
+    /**
+     * Get total number of members.
+     */
+    public function getTotalMembresAttribute()
+    {
+        return $this->membres()->count();
+    }
+
+    /**
+     * Get number of active members.
+     */
+    public function getTotalMembresActifsAttribute()
+    {
+        return $this->membresActifs()->count();
+    }
+
+    /**
+     * Get number of inactive members.
+     */
+    public function getTotalMembresInactifsAttribute()
+    {
+        return $this->membresInactifs()->count();
+    }
+
+    /**
+     * Get number of deleted members.
+     */
+    public function getTotalMembresSuprimesAttribute()
+    {
+        return $this->membresSupprimes()->count();
     }
 
     /**
