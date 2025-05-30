@@ -16,11 +16,12 @@
         body {
             font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background: 
-            linear-gradient(rgba(170, 170, 170, 0.5)),
-            url(vache-noire-et-blanche-paissant-sur-le-paturage-pendant-la-journee.jpg);
+            linear-gradient(rgba(170, 170, 170, 0.5), rgba(170, 170, 170, 0.5)),
+            url('{{ asset('image/background.jpg') }}');
             background-size: cover;
             background-position: center;
             background-repeat: no-repeat;
+            background-attachment: fixed;
 
             min-height: 100vh;
             display: flex;
@@ -29,8 +30,6 @@
             padding: 20px;
             position: relative;
         }
-
-       
 
         .login-container {
             background: rgba(255, 255, 255, 0.4);
@@ -198,6 +197,39 @@
             font-weight: 400;
         }
 
+        /* Alert Messages */
+        .alert {
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 12px;
+            font-weight: 500;
+            text-align: right;
+        }
+
+        .alert-success {
+            background-color: rgba(40, 167, 69, 0.1);
+            border: 1px solid rgba(40, 167, 69, 0.3);
+            color: #155724;
+        }
+
+        .alert-error {
+            background-color: rgba(220, 53, 69, 0.1);
+            border: 1px solid rgba(220, 53, 69, 0.3);
+            color: #721c24;
+        }
+
+        .form-error {
+            color: #dc3545;
+            font-size: 13px;
+            margin-top: 5px;
+            text-align: right;
+        }
+
+        .form-input.is-invalid {
+            border-color: #dc3545;
+            box-shadow: 0 0 0 3px rgba(220, 53, 69, 0.1);
+        }
+
         @media (max-width: 480px) {
             .login-container {
                 padding: 40px 30px;
@@ -255,22 +287,55 @@
             <p class="login-subtitle">أدخل بياناتك للوصول إلى حسابك</p>
         </div>
 
-        <form class="login-form" >
+        <!-- Success Message -->
+        @if(session('success'))
+            <div class="alert alert-success">
+                {{ session('success') }}
+            </div>
+        @endif
+
+        <!-- Error Messages -->
+        @if($errors->any())
+            <div class="alert alert-error">
+                خطأ في البيانات المدخلة
+            </div>
+        @endif
+
+        <form class="login-form" method="POST" action="{{ route('login') }}">
+            @csrf
+            
             <div class="form-group">
                 <label for="matricule" class="form-label">رقم التسجيل</label>
                 <div class="input-container">
-                    <input type="text" id="matricule" name="matricule" class="form-input" placeholder="أدخل رقم التسجيل" required>
+                    <input type="text" 
+                           id="matricule" 
+                           name="matricule" 
+                           class="form-input @error('matricule') is-invalid @enderror" 
+                           placeholder="أدخل رقم التسجيل" 
+                           value="{{ old('matricule') }}" 
+                           required>
                 </div>
+                @error('matricule')
+                    <div class="form-error">{{ $message }}</div>
+                @enderror
             </div>
 
             <div class="form-group">
                 <label for="password" class="form-label">كلمة المرور</label>
                 <div class="password-container">
-                    <input type="password" id="password" name="password" class="form-input" placeholder="أدخل كلمة المرور" required>
+                    <input type="password" 
+                           id="password" 
+                           name="password" 
+                           class="form-input @error('password') is-invalid @enderror" 
+                           placeholder="أدخل كلمة المرور" 
+                           required>
                     <button type="button" class="password-toggle" onclick="togglePassword()">
                         <i class="fas fa-eye" id="toggleIcon"></i>
                     </button>
                 </div>
+                @error('password')
+                    <div class="form-error">{{ $message }}</div>
+                @enderror
                 <div class="forgot-password">
                     <a href="#">نسيت كلمة المرور؟</a>
                 </div>
@@ -302,8 +367,15 @@
             }
         }
 
-        
-           
+        // Add loading state to form submission
+        document.querySelector('.login-form').addEventListener('submit', function() {
+            const button = document.getElementById('loginBtn');
+            const buttonText = document.getElementById('buttonText');
+            
+            button.classList.add('loading');
+            button.disabled = true;
+            buttonText.textContent = 'جاري تسجيل الدخول...';
+        });
     </script>
 </body>
 </html>
