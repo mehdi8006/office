@@ -213,4 +213,98 @@ class Cooperative extends Model
             }
         });
     }
+    // Ajouter ces relations dans le modèle Cooperative.php existant
+
+    /**
+     * Get all livraisons usine for this cooperative.
+     */
+    public function livraisonsUsine()
+    {
+        return $this->hasMany(LivraisonUsine::class, 'id_cooperative', 'id_cooperative');
+    }
+
+    /**
+     * Get all paiements from usine for this cooperative.
+     */
+    public function paiementsUsine()
+    {
+        return $this->hasMany(PaiementCooperativeUsine::class, 'id_cooperative', 'id_cooperative');
+    }
+
+    /**
+     * Get all paiements to eleveurs from this cooperative.
+     */
+    public function paiementsEleveurs()
+    {
+        return $this->hasMany(PaiementCooperativeEleveur::class, 'id_cooperative', 'id_cooperative');
+    }
+
+    /**
+     * Get planned livraisons.
+     */
+    public function livraisonsPlanifiees()
+    {
+        return $this->hasMany(LivraisonUsine::class, 'id_cooperative', 'id_cooperative')
+                    ->where('statut', 'planifiee');
+    }
+
+    /**
+     * Get validated livraisons.
+     */
+    public function livraisonsValidees()
+    {
+        return $this->hasMany(LivraisonUsine::class, 'id_cooperative', 'id_cooperative')
+                    ->where('statut', 'validee');
+    }
+
+    /**
+     * Get paid livraisons.
+     */
+    public function livraisonsPayees()
+    {
+        return $this->hasMany(LivraisonUsine::class, 'id_cooperative', 'id_cooperative')
+                    ->where('statut', 'payee');
+    }
+
+    /**
+     * Get pending payments from usine.
+     */
+    public function paiementsUsineEnAttente()
+    {
+        return $this->hasMany(PaiementCooperativeUsine::class, 'id_cooperative', 'id_cooperative')
+                    ->where('statut', 'en_attente');
+    }
+
+    /**
+     * Get calculated payments to eleveurs.
+     */
+    public function paiementsEleveursCalcules()
+    {
+        return $this->hasMany(PaiementCooperativeEleveur::class, 'id_cooperative', 'id_cooperative')
+                    ->where('statut', 'calcule');
+    }
+
+    /**
+     * Get total livraisons amount.
+     */
+    public function getTotalLivraisonsAttribute()
+    {
+        return $this->livraisonsUsine()->sum('montant_total');
+    }
+
+    /**
+     * Get total payments received from usine.
+     */
+    public function getTotalPaiementsUsineAttribute()
+    {
+        return $this->paiementsUsine()->where('statut', 'paye')->sum('montant');
+    }
+
+    /**
+     * Get total payments made to eleveurs.
+     */
+    public function getTotalPaiementsEleveursAttribute()
+    {
+        return $this->paiementsEleveurs()->where('statut', 'paye')->sum('montant_total');
+    }
 }

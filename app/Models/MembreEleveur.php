@@ -221,4 +221,55 @@ class MembreEleveur extends Model
             }
         });
     }
+    // Ajouter ces relations dans le modèle MembreEleveur.php existant
+
+    /**
+     * Get all paiements for this membre.
+     */
+    public function paiements()
+    {
+        return $this->hasMany(PaiementCooperativeEleveur::class, 'id_membre', 'id_membre');
+    }
+
+    /**
+     * Get calculated paiements.
+     */
+    public function paiementsCalcules()
+    {
+        return $this->hasMany(PaiementCooperativeEleveur::class, 'id_membre', 'id_membre')
+                    ->where('statut', 'calcule');
+    }
+
+    /**
+     * Get paid paiements.
+     */
+    public function paiementsPayes()
+    {
+        return $this->hasMany(PaiementCooperativeEleveur::class, 'id_membre', 'id_membre')
+                    ->where('statut', 'paye');
+    }
+
+    /**
+     * Get total amount paid to this membre.
+     */
+    public function getTotalPaiementsAttribute()
+    {
+        return $this->paiementsPayes()->sum('montant_total');
+    }
+
+    /**
+     * Get pending payments amount.
+     */
+    public function getMontantEnAttenteAttribute()
+    {
+        return $this->paiementsCalcules()->sum('montant_total');
+    }
+
+    /**
+     * Get last payment for this membre.
+     */
+    public function getDernierPaiementAttribute()
+    {
+        return $this->paiementsPayes()->latest('date_paiement')->first();
+    }
 }
