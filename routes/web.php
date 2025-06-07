@@ -60,6 +60,7 @@ Route::middleware('auth')->group(function () {
             // Actions rapides
             Route::patch('/{membre}/activate', [MembreEleveurController::class, 'activate'])->name('activate');
             Route::patch('/{membre}/deactivate', [MembreEleveurController::class, 'deactivate'])->name('deactivate');
+            Route::patch('/{membre}/restore', [MembreEleveurController::class, 'restore'])->name('restore');
             Route::delete('/{membre}', [MembreEleveurController::class, 'destroy'])->name('destroy');
         });
 

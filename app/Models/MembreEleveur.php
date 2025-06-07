@@ -170,6 +170,20 @@ class MembreEleveur extends Model
     }
 
     /**
+     * Restore the deleted member.
+     */
+    public function restaurer()
+    {
+        if ($this->statut !== 'suppression') {
+            throw new \Exception('Seuls les membres supprimés peuvent être restaurés');
+        }
+        
+        $this->statut = 'actif';
+        $this->raison_suppression = null;
+        return $this->save();
+    }
+
+    /**
      * Get formatted member info.
      */
     public function getFullInfoAttribute()
@@ -221,8 +235,8 @@ class MembreEleveur extends Model
             }
         });
     }
-    // Ajouter ces relations dans le modèle MembreEleveur.php existant
 
+    // Relations avec les paiements
     /**
      * Get all paiements for this membre.
      */

@@ -199,16 +199,10 @@ class MembreEleveurController extends Controller
         try {
             $membre->activer();
             
-            return response()->json([
-                'success' => true,
-                'message' => 'Membre activé avec succès'
-            ]);
+            return redirect()->back()->with('success', 'Membre activé avec succès');
             
         } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Erreur lors de l\'activation'
-            ], 500);
+            return redirect()->back()->with('error', 'Erreur lors de l\'activation');
         }
     }
 
@@ -220,16 +214,10 @@ class MembreEleveurController extends Controller
         try {
             $membre->desactiver();
             
-            return response()->json([
-                'success' => true,
-                'message' => 'Membre désactivé avec succès'
-            ]);
+            return redirect()->back()->with('success', 'Membre désactivé avec succès');
             
         } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Erreur lors de la désactivation'
-            ], 500);
+            return redirect()->back()->with('error', 'Erreur lors de la désactivation');
         }
     }
 
@@ -247,16 +235,34 @@ class MembreEleveurController extends Controller
         try {
             $membre->supprimer($request->raison_suppression);
             
-            return response()->json([
-                'success' => true,
-                'message' => 'Membre supprimé avec succès'
-            ]);
+            return redirect()
+                ->route('gestionnaire.membres.index')
+                ->with('success', 'Membre supprimé avec succès');
             
         } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Erreur lors de la suppression'
-            ], 500);
+            return redirect()->back()->with('error', 'Erreur lors de la suppression');
+        }
+    }
+
+    /**
+     * Restore the specified deleted membre.
+     */
+    public function restore(MembreEleveur $membre)
+    {
+        // Vérifier que le membre est bien supprimé
+        if ($membre->statut !== 'suppression') {
+            return redirect()->back()->with('error', 'Ce membre n\'est pas supprimé');
+        }
+
+        try {
+            $membre->restaurer();
+            
+            return redirect()
+                ->back()
+                ->with('success', 'Membre restauré avec succès et réactivé');
+            
+        } catch (\Exception $e) {
+            return redirect()->back()->with('error', 'Erreur lors de la restauration : ' . $e->getMessage());
         }
     }
 

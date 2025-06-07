@@ -11,23 +11,62 @@
         <a href="{{ route('gestionnaire.membres.index') }}" class="btn btn-outline-secondary">
             <i class="fas fa-arrow-left me-2"></i>Retour à la liste
         </a>
-        <a href="{{ route('gestionnaire.membres.edit', $membre) }}" class="btn btn-primary">
-            <i class="fas fa-edit me-2"></i>Modifier
-        </a>
+        
+        @if($membre->statut !== 'suppression')
+            <a href="{{ route('gestionnaire.membres.edit', $membre) }}" class="btn btn-primary">
+                <i class="fas fa-edit me-2"></i>Modifier
+            </a>
+        @endif
         
         @if($membre->statut === 'actif')
-            <button onclick="toggleStatus({{ $membre->id_membre }}, 'deactivate')" class="btn btn-warning">
-                <i class="fas fa-user-times me-2"></i>Désactiver
-            </button>
+            <form action="{{ route('gestionnaire.membres.deactivate', $membre) }}" 
+                  method="POST" 
+                  style="display: inline;"
+                  onsubmit="return confirm('Êtes-vous sûr de vouloir désactiver ce membre ?')">
+                @csrf
+                @method('PATCH')
+                <button type="submit" class="btn btn-warning">
+                    <i class="fas fa-user-times me-2"></i>Désactiver
+                </button>
+            </form>
         @elseif($membre->statut === 'inactif')
-            <button onclick="toggleStatus({{ $membre->id_membre }}, 'activate')" class="btn btn-success">
-                <i class="fas fa-user-check me-2"></i>Activer
-            </button>
+            <form action="{{ route('gestionnaire.membres.activate', $membre) }}" 
+                  method="POST" 
+                  style="display: inline;"
+                  onsubmit="return confirm('Êtes-vous sûr de vouloir activer ce membre ?')">
+                @csrf
+                @method('PATCH')
+                <button type="submit" class="btn btn-success">
+                    <i class="fas fa-user-check me-2"></i>Activer
+                </button>
+            </form>
+        @elseif($membre->statut === 'suppression')
+            <form action="{{ route('gestionnaire.membres.restore', $membre) }}" 
+                  method="POST" 
+                  style="display: inline;"
+                  onsubmit="return confirm('Êtes-vous sûr de vouloir restaurer ce membre ? Il sera automatiquement réactivé.')">
+                @csrf
+                @method('PATCH')
+                <button type="submit" class="btn btn-success">
+                    <i class="fas fa-undo me-2"></i>Restaurer
+                </button>
+            </form>
         @endif
     </div>
 @endsection
 
 @section('content')
+<!-- Alert pour membre supprimé -->
+@if($membre->statut === 'suppression')
+    <div class="alert alert-danger d-flex align-items-center mb-4">
+        <i class="fas fa-exclamation-triangle me-3" style="font-size: 1.5rem;"></i>
+        <div>
+            <h6 class="alert-heading mb-1">Membre Supprimé</h6>
+            <p class="mb-0">Ce membre a été supprimé du système. Vous pouvez le restaurer en utilisant le bouton "Restaurer" ci-dessus.</p>
+        </div>
+    </div>
+@endif
+
 <div class="row">
     <!-- Left Column - Member Info -->
     <div class="col-lg-4 mb-4">
@@ -320,33 +359,30 @@ new Chart(ctx, {
     }
 });
 
-// Toggle member status function
-function toggleStatus(membreId, action) {
-    const actionText = action === 'activate' ? 'activer' : 'désactiver';
+// Toast notification function
+function showToast(message, type) {
+    // Simple toast notification
+    const toastColor = type === 'success' ? 'bg-success' : 'bg-danger';
+    const toast = document.createElement('div');
+    toast.className = `toast align-items-center text-white border-0 ${toastColor}`;
+    toast.setAttribute('role', 'alert');
+    toast.setAttribute('aria-live', 'assertive');
+    toast.setAttribute('aria-atomic', 'true');
+    toast.innerHTML = `
+        <div class="d-flex">
+            <div class="toast-body">
+                ${message}
+            </div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+        </div>
+    `;
     
-    if (!confirm(`Êtes-vous sûr de vouloir ${actionText} ce membre ?`)) {
-        return;
-    }
-
-    fetch(`/gestionnaire/membres/${membreId}/${action}`, {
-        method: 'PATCH',
-        headers: {
-            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
-            'Content-Type': 'application/json',
-        }
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            showToast(data.message, 'success');
-            setTimeout(() => location.reload(), 1000);
-        } else {
-            showToast(data.message, 'error');
-        }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        showToast('Une erreur est survenue', 'error');
+    document.body.appendChild(toast);
+    const bsToast = new bootstrap.Toast(toast);
+    bsToast.show();
+    
+    toast.addEventListener('hidden.bs.toast', () => {
+        document.body.removeChild(toast);
     });
 }
 </script>

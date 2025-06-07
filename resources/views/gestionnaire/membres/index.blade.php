@@ -224,27 +224,57 @@
                                             <i class="fas fa-eye"></i>
                                         </a>
 
-                                        <!-- Edit -->
-                                        <a href="{{ route('gestionnaire.membres.edit', $membre) }}" 
-                                           class="btn btn-sm btn-outline-primary" 
-                                           title="Modifier">
-                                            <i class="fas fa-edit"></i>
-                                        </a>
+                                        @if($membre->statut !== 'suppression')
+                                            <!-- Edit -->
+                                            <a href="{{ route('gestionnaire.membres.edit', $membre) }}" 
+                                               class="btn btn-sm btn-outline-primary" 
+                                               title="Modifier">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+                                        @endif
 
                                         @if($membre->statut === 'actif')
                                             <!-- Deactivate -->
-                                            <button onclick="toggleStatus({{ $membre->id_membre }}, 'deactivate')" 
-                                                    class="btn btn-sm btn-outline-warning" 
-                                                    title="Désactiver">
-                                                <i class="fas fa-user-times"></i>
-                                            </button>
+                                            <form action="{{ route('gestionnaire.membres.deactivate', $membre) }}" 
+                                                  method="POST" 
+                                                  style="display: inline;"
+                                                  onsubmit="return confirm('Êtes-vous sûr de vouloir désactiver ce membre ?')">
+                                                @csrf
+                                                @method('PATCH')
+                                                <button type="submit" 
+                                                        class="btn btn-sm btn-outline-warning" 
+                                                        title="Désactiver">
+                                                    <i class="fas fa-user-times"></i>
+                                                </button>
+                                            </form>
                                         @elseif($membre->statut === 'inactif')
                                             <!-- Activate -->
-                                            <button onclick="toggleStatus({{ $membre->id_membre }}, 'activate')" 
-                                                    class="btn btn-sm btn-outline-success" 
-                                                    title="Activer">
-                                                <i class="fas fa-user-check"></i>
-                                            </button>
+                                            <form action="{{ route('gestionnaire.membres.activate', $membre) }}" 
+                                                  method="POST" 
+                                                  style="display: inline;"
+                                                  onsubmit="return confirm('Êtes-vous sûr de vouloir activer ce membre ?')">
+                                                @csrf
+                                                @method('PATCH')
+                                                <button type="submit" 
+                                                        class="btn btn-sm btn-outline-success" 
+                                                        title="Activer">
+                                                    <i class="fas fa-user-check"></i>
+                                                </button>
+                                            </form>
+                                        @elseif($membre->statut === 'suppression')
+                                            <!-- Restore -->
+                                            <form action="{{ route('gestionnaire.membres.restore', $membre) }}" 
+                                                  method="POST" 
+                                                  style="display: inline;"
+                                                  onsubmit="return confirm('Êtes-vous sûr de vouloir restaurer ce membre ? Il sera automatiquement réactivé.')">
+                                                @csrf
+                                                @method('PATCH')
+                                                <button type="submit" 
+                                                        class="btn btn-sm btn-outline-success" 
+                                                        title="Restaurer">
+                                                    <i class="fas fa-undo"></i>
+                                                </button>
+                                            </form>
                                         @endif
 
                                         @if($membre->statut !== 'suppression')
@@ -299,26 +329,34 @@
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <div class="modal-body">
-                <p>Êtes-vous sûr de vouloir supprimer le membre <strong id="memberName"></strong> ?</p>
-                <div class="mb-3">
-                    <label for="deleteReason" class="form-label">Raison de la suppression <span class="text-danger">*</span></label>
-                    <textarea class="form-control" id="deleteReason" rows="3" placeholder="Veuillez préciser la raison de la suppression..."></textarea>
-                    <div class="invalid-feedback" id="deleteReasonError"></div>
+            <form id="deleteForm" method="POST">
+                @csrf
+                @method('DELETE')
+                <div class="modal-body">
+                    <p>Êtes-vous sûr de vouloir supprimer le membre <strong id="memberName"></strong> ?</p>
+                    <div class="mb-3">
+                        <label for="deleteReason" class="form-label">Raison de la suppression <span class="text-danger">*</span></label>
+                        <textarea class="form-control" 
+                                  id="deleteReason" 
+                                  name="raison_suppression" 
+                                  rows="3" 
+                                  placeholder="Veuillez préciser la raison de la suppression..." 
+                                  required></textarea>
+                    </div>
+                    <div class="alert alert-warning">
+                        <i class="fas fa-info-circle me-2"></i>
+                        Cette action marquera le membre comme supprimé. L'historique sera conservé.
+                    </div>
                 </div>
-                <div class="alert alert-warning">
-                    <i class="fas fa-info-circle me-2"></i>
-                    Cette action marquera le membre comme supprimé. L'historique sera conservé.
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-1"></i>Annuler
+                    </button>
+                    <button type="submit" class="btn btn-danger">
+                        <i class="fas fa-trash me-1"></i>Supprimer
+                    </button>
                 </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                    <i class="fas fa-times me-1"></i>Annuler
-                </button>
-                <button type="button" class="btn btn-danger" onclick="executeDelete()">
-                    <i class="fas fa-trash me-1"></i>Supprimer
-                </button>
-            </div>
+            </form>
         </div>
     </div>
 </div>
@@ -326,96 +364,40 @@
 
 @push('scripts')
 <script>
-let currentMemberId = null;
-
-// Toggle member status (activate/deactivate)
-function toggleStatus(membreId, action) {
-    const actionText = action === 'activate' ? 'activer' : 'désactiver';
-    
-    if (!confirm(`Êtes-vous sûr de vouloir ${actionText} ce membre ?`)) {
-        return;
-    }
-
-    fetch(`/gestionnaire/membres/${membreId}/${action}`, {
-        method: 'PATCH',
-        headers: {
-            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
-            'Content-Type': 'application/json',
-        }
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            showToast(data.message, 'success');
-            setTimeout(() => location.reload(), 1000);
-        } else {
-            showToast(data.message, 'error');
-        }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        showToast('Une erreur est survenue', 'error');
-    });
-}
-
 // Show delete confirmation modal
 function confirmDelete(membreId, memberName) {
-    currentMemberId = membreId;
     document.getElementById('memberName').textContent = memberName;
+    document.getElementById('deleteForm').action = `/gestionnaire/membres/${membreId}`;
     document.getElementById('deleteReason').value = '';
-    document.getElementById('deleteReason').classList.remove('is-invalid');
-    document.getElementById('deleteReasonError').textContent = '';
     
     const modal = new bootstrap.Modal(document.getElementById('deleteModal'));
     modal.show();
 }
 
-// Execute delete action
-function executeDelete() {
-    const reason = document.getElementById('deleteReason').value.trim();
-    const reasonInput = document.getElementById('deleteReason');
-    const reasonError = document.getElementById('deleteReasonError');
+// Toast notification function
+function showToast(message, type) {
+    // Simple toast notification
+    const toastColor = type === 'success' ? 'bg-success' : 'bg-danger';
+    const toast = document.createElement('div');
+    toast.className = `toast align-items-center text-white border-0 ${toastColor}`;
+    toast.setAttribute('role', 'alert');
+    toast.setAttribute('aria-live', 'assertive');
+    toast.setAttribute('aria-atomic', 'true');
+    toast.innerHTML = `
+        <div class="d-flex">
+            <div class="toast-body">
+                ${message}
+            </div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+        </div>
+    `;
     
-    // Reset validation
-    reasonInput.classList.remove('is-invalid');
-    reasonError.textContent = '';
+    document.body.appendChild(toast);
+    const bsToast = new bootstrap.Toast(toast);
+    bsToast.show();
     
-    if (!reason) {
-        reasonInput.classList.add('is-invalid');
-        reasonError.textContent = 'La raison de suppression est requise';
-        return;
-    }
-
-    if (reason.length < 10) {
-        reasonInput.classList.add('is-invalid');
-        reasonError.textContent = 'La raison doit contenir au moins 10 caractères';
-        return;
-    }
-
-    fetch(`/gestionnaire/membres/${currentMemberId}`, {
-        method: 'DELETE',
-        headers: {
-            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-            raison_suppression: reason
-        })
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            const modal = bootstrap.Modal.getInstance(document.getElementById('deleteModal'));
-            modal.hide();
-            showToast(data.message, 'success');
-            setTimeout(() => location.reload(), 1000);
-        } else {
-            showToast(data.message, 'error');
-        }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        showToast('Une erreur est survenue', 'error');
+    toast.addEventListener('hidden.bs.toast', () => {
+        document.body.removeChild(toast);
     });
 }
 </script>
