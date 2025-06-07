@@ -28,11 +28,11 @@ class AuthController extends Controller
             'matricule' => 'required|string|min:1|max:10',
             'password' => 'required|string|min:1',
         ], [
-            'matricule.required' => 'رقم التسجيل مطلوب',
-            'matricule.string' => 'رقم التسجيل يجب أن يكون نص',
-            'matricule.max' => 'رقم التسجيل لا يجب أن يتجاوز 10 أرقام',
-            'password.required' => 'كلمة المرور مطلوبة',
-            'password.string' => 'كلمة المرور يجب أن تكون نص',
+            'matricule.required' => 'Le numéro d\'inscription est requis',
+            'matricule.string' => 'Le numéro d\'inscription doit être un texte',
+            'matricule.max' => 'Le numéro d\'inscription ne doit pas dépasser 10 caractères',
+            'password.required' => 'Le mot de passe est requis',
+            'password.string' => 'Le mot de passe doit être un texte',
         ]);
 
         $matricule = $request->input('matricule');
@@ -44,21 +44,21 @@ class AuthController extends Controller
         // Check if user exists
         if (!$user) {
             throw ValidationException::withMessages([
-                'matricule' => 'رقم التسجيل غير صحيح',
+                'matricule' => 'Numéro d\'inscription incorrect',
             ]);
         }
 
         // Check if user is active
         if (!$user->isActif()) {
             throw ValidationException::withMessages([
-                'matricule' => 'الحساب غير مفعل. يرجى الاتصال بالمسؤول',
+                'matricule' => 'Compte inactif. Veuillez contacter l\'administrateur',
             ]);
         }
 
         // Check password
         if (!Hash::check($password, $user->mot_de_passe)) {
             throw ValidationException::withMessages([
-                'password' => 'كلمة المرور غير صحيحة',
+                'password' => 'Mot de passe incorrect',
             ]);
         }
 
@@ -86,7 +86,7 @@ class AuthController extends Controller
 
         $route = $redirectRoutes[$role] ?? 'eleveur.dashboard';
         
-        return redirect()->route($route)->with('success', 'مرحباً بك! تم تسجيل الدخول بنجاح');
+        return redirect()->route($route)->with('success', 'Bienvenue ! Connexion réussie');
     }
 
     /**
@@ -99,7 +99,7 @@ class AuthController extends Controller
         $request->session()->invalidate();
         $request->session()->regenerateToken();
 
-        return redirect()->route('login')->with('success', 'تم تسجيل الخروج بنجاح');
+        return redirect()->route('login')->with('success', 'Déconnexion réussie');
     }
 
     /**

@@ -40,7 +40,6 @@ return new class extends Migration
             $table->index('statut');
             $table->index(['id_membre', 'statut']);
             $table->index(['id_cooperative', 'statut']);
-            $table->index(['id_cooperative', 'periode_debut', 'periode_fin']);
         });
     }
 

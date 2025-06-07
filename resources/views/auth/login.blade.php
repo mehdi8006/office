@@ -1,356 +1,292 @@
 <!DOCTYPE html>
-<html lang="ar" dir="rtl">
+<html lang="fr">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>تسجيل الدخول - SGCCL</title>
+    <title>Connexion - SGCCL</title>
+    
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
         body {
-            font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: 
-            linear-gradient(rgba(170, 170, 170, 0.5), rgba(170, 170, 170, 0.5)),
-            url('{{ asset('image/background.jpg') }}');
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(rgba(170, 170, 170, 0.5), rgba(170, 170, 170, 0.5)),
+                        url('{{ asset('image/background.jpg') }}');
             background-size: cover;
             background-position: center;
             background-repeat: no-repeat;
             background-attachment: fixed;
+            height: 100vh;
+            overflow-x: hidden;
+        }
 
-            min-height: 100vh;
+        .login-wrapper {
+            height: 100vh;
             display: flex;
             align-items: center;
             justify-content: center;
-            padding: 20px;
-            position: relative;
+            padding: 15px;
         }
 
         .login-container {
-            background: rgba(255, 255, 255, 0.4);
+            background: rgba(255, 255, 255, 0.95);
             backdrop-filter: blur(10px);
-            padding: 25px 20px;
             border-radius: 20px;
             box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
-            width: 100%;
-            max-width: 420px;
-            text-align: center;
-            position: relative;
             border: 1px solid rgba(255, 255, 255, 0.2);
-        }
-
-        .logo-section {
-            margin-bottom: 10px;
+            width: 100%;
+            max-width: 400px;
+            margin: 0 auto;
         }
 
         .logo-icon {
-            width: 80px;
-            height: 80px;
+            width: 70px;
+            height: 70px;
             background: linear-gradient(135deg, #28a745, #20c997);
-            border-radius: 20px;
+            border-radius: 18px;
             display: flex;
             align-items: center;
             justify-content: center;
-            margin: 0 auto 5px;
-            box-shadow: 0 10px 30px rgba(40, 167, 69, 0.3);
+            box-shadow: 0 8px 25px rgba(40, 167, 69, 0.3);
+            flex-shrink: 0;
+        }
+
+        .logo-section {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 1rem;
         }
 
         .logo-icon i {
-            font-size: 30px;
+            font-size: 28px;
             color: white;
         }
 
-        .login-title {
-            color: #2d3436;
-            font-size: 30px;
-            font-weight: 700;
-            letter-spacing: -0.5px;
-        }
-
-        .login-subtitle {
-            color: #636e72;
-            font-size: 15px;
-            font-weight: 400;
-            line-height: 1.5;
-        }
-
-        .form-group {
-            margin-bottom: 15px;
-            text-align: right;
-        }
-
-        .form-label {
-            display: block;
-            margin-bottom: 5px;
-            margin-right: 5px;
-            color: #2d3436;
-            font-weight: 500;
-            font-size: 14px;
-        }
-
-        .input-container {
-            position: relative;
-        }
-
-        .form-input {
-            width: 100%;
-            padding: 16px 20px;
-            border: 2px solid #e9ecef;
-            border-radius: 12px;
-            font-size: 16px;
-            font-weight: 400;
+        .btn-login {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            border: none;
+            box-shadow: 0 8px 25px rgba(40, 167, 69, 0.25);
             transition: all 0.3s ease;
-            direction: rtl;
-            background: #ffffff;
+            height: 48px;
         }
 
-        .form-input:focus {
-            outline: none;
+        .btn-login:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 35px rgba(40, 167, 69, 0.35);
+            background: linear-gradient(135deg, #1e7e34 0%, #17a2b8 100%);
+        }
+
+        .form-control {
+            height: 48px;
+            border-radius: 12px;
+            border: 2px solid #e9ecef;
+            transition: all 0.3s ease;
+        }
+
+        .form-control:focus {
             border-color: #28a745;
-            box-shadow: 0 0 0 3px rgba(40, 167, 69, 0.1);
-            background: #ffffff;
-        }
-
-        .form-input::placeholder {
-            color: #adb5bd;
-            font-weight: 400;
-        }
-
-        .password-container {
-            position: relative;
+            box-shadow: 0 0 0 0.2rem rgba(40, 167, 69, 0.25);
         }
 
         .password-toggle {
             position: absolute;
-            left: 18px;
+            right: 15px;
             top: 50%;
             transform: translateY(-50%);
             background: none;
             border: none;
             color: #6c757d;
             cursor: pointer;
-            font-size: 18px;
-            transition: color 0.3s ease;
-            padding: 5px;
+            z-index: 10;
+            width: 20px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
         .password-toggle:hover {
             color: #28a745;
         }
 
-        .form-input[type="password"] {
-            padding-left: 55px;
+        .password-field {
+            padding-right: 50px !important;
         }
 
-        .forgot-password {
-            text-align: left;
-            margin-top: 10px;
-        }
-
-        .forgot-password a {
-            color: #28a745;
-            text-decoration: none;
-            font-size: 14px;
-            font-weight: 500;
-            transition: color 0.3s ease;
-        }
-
-        .forgot-password a:hover {
-            color: #1e7e34;
-            text-decoration: underline;
-        }
-
-        .login-button {
-            width: 100%;
-            padding: 16px;
-            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
-            color: white;
-            border: none;
-            border-radius: 12px;
-            font-size: 16px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            margin-top: 10px;
-            box-shadow: 0 8px 25px rgba(40, 167, 69, 0.25);
-        }
-
-        .login-button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 12px 35px rgba(40, 167, 69, 0.35);
-            background: linear-gradient(135deg, #1e7e34 0%, #17a2b8 100%);
-        }
-
-        .login-button:active {
-            transform: translateY(0);
-        }
-
-        .footer-text {
-            margin-top: 15px;
-            color: #6c757d;
-            font-size: 13px;
-            font-weight: 400;
-        }
-
-        /* Alert Messages */
-        .alert {
-            padding: 15px;
-            margin-bottom: 20px;
-            border-radius: 12px;
-            font-weight: 500;
-            text-align: right;
-        }
-
-        .alert-success {
-            background-color: rgba(40, 167, 69, 0.1);
-            border: 1px solid rgba(40, 167, 69, 0.3);
-            color: #155724;
-        }
-
-        .alert-error {
-            background-color: rgba(220, 53, 69, 0.1);
-            border: 1px solid rgba(220, 53, 69, 0.3);
-            color: #721c24;
-        }
-
-        .form-error {
-            color: #dc3545;
-            font-size: 13px;
-            margin-top: 5px;
-            text-align: right;
-        }
-
-        .form-input.is-invalid {
-            border-color: #dc3545;
-            box-shadow: 0 0 0 3px rgba(220, 53, 69, 0.1);
-        }
-
-        @media (max-width: 480px) {
+        @media (max-width: 768px) {
             .login-container {
-                padding: 40px 30px;
+                max-width: 350px;
                 margin: 10px;
-                max-width: 90%;
             }
             
-            .login-title {
-                font-size: 28px;
-            }
-
             .logo-icon {
-                width: 70px;
-                height: 70px;
+                width: 60px;
+                height: 60px;
             }
-
+            
             .logo-icon i {
-                font-size: 30px;
+                font-size: 24px;
             }
         }
 
-        /* Loading animation */
-        .loading {
-            position: relative;
-            pointer-events: none;
+        @media (max-width: 576px) {
+            .login-wrapper {
+                padding: 10px;
+            }
+            
+            .login-container {
+                max-width: 320px;
+                padding: 2rem 1.5rem !important;
+            }
+            
+            .form-control {
+                height: 44px;
+            }
+            
+            .btn-login {
+                height: 44px;
+            }
         }
 
-        .loading::after {
-            content: '';
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            width: 20px;
-            height: 20px;
-            margin: -10px 0 0 -10px;
-            border: 2px solid transparent;
-            border-top: 2px solid #ffffff;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
+        @media (max-width: 360px) {
+            .login-container {
+                max-width: 300px;
+                padding: 1.5rem 1rem !important;
+            }
         }
     </style>
 </head>
 <body>
-    <div class="login-container">
-        <div class="logo-section">
-            <div class="logo-icon">
-                <i class="fas fa-seedling"></i>
-            </div>
-            <h1 class="login-title">SGCCL</h1>
-            <p class="login-subtitle">أدخل بياناتك للوصول إلى حسابك</p>
-        </div>
-
-        <!-- Success Message -->
-        @if(session('success'))
-            <div class="alert alert-success">
-                {{ session('success') }}
-            </div>
-        @endif
-
-        <!-- Error Messages -->
-        @if($errors->any())
-            <div class="alert alert-error">
-                خطأ في البيانات المدخلة
-            </div>
-        @endif
-
-        <form class="login-form" method="POST" action="{{ route('login') }}">
-            @csrf
-            
-            <div class="form-group">
-                <label for="matricule" class="form-label">رقم التسجيل</label>
-                <div class="input-container">
-                    <input type="text" 
-                           id="matricule" 
-                           name="matricule" 
-                           class="form-input @error('matricule') is-invalid @enderror" 
-                           placeholder="أدخل رقم التسجيل" 
-                           value="{{ old('matricule') }}" 
-                           required>
+    <div class="login-wrapper">
+        <div class="login-container p-4">
+            <!-- Logo Section -->
+            <div class="text-center mb-4">
+                <div class="logo-section mb-3">
+                    <div class="logo-icon">
+                        <i class="fas fa-seedling"></i>
+                    </div>
+                    <h1 class="h2 fw-bold text-dark mb-0">SGCCL</h1>
                 </div>
-                @error('matricule')
-                    <div class="form-error">{{ $message }}</div>
-                @enderror
+                <p class="text-muted mb-0">Connectez-vous à votre compte</p>
             </div>
 
-            <div class="form-group">
-                <label for="password" class="form-label">كلمة المرور</label>
-                <div class="password-container">
-                    <input type="password" 
-                           id="password" 
-                           name="password" 
-                           class="form-input @error('password') is-invalid @enderror" 
-                           placeholder="أدخل كلمة المرور" 
-                           required>
-                    <button type="button" class="password-toggle" onclick="togglePassword()">
-                        <i class="fas fa-eye" id="toggleIcon"></i>
-                    </button>
-                </div>
-                @error('password')
-                    <div class="form-error">{{ $message }}</div>
-                @enderror
-                <div class="forgot-password">
-                    <a href="#">نسيت كلمة المرور؟</a>
-                </div>
-            </div>
+                    <!-- Success Message -->
+                    @if(session('success'))
+                        <div class="alert alert-success alert-dismissible fade show" role="alert">
+                            <i class="fas fa-check-circle me-2"></i>
+                            {{ session('success') }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    @endif
 
-            <button type="submit" class="login-button" id="loginBtn">
-                <span id="buttonText">دخول</span>
-            </button>
-        </form>
+                    <!-- Error Messages -->
+                    @if($errors->any())
+                        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                            <i class="fas fa-exclamation-circle me-2"></i>
+                            Erreur dans les données saisies
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    @endif
 
-        <div class="footer-text">
-            نظام إدارة التعاونيات الفلاحية
-        </div>
+                    <!-- Login Form -->
+                    <form method="POST" action="{{ route('login') }}" novalidate>
+                        @csrf
+                        
+                        <!-- Matricule Field -->
+                        <div class="mb-3">
+                            <label for="matricule" class="form-label fw-medium">
+                                <i class="fas fa-id-card me-2 text-success"></i>
+                                Numéro d'inscription
+                            </label>
+                            <input type="text" 
+                                   id="matricule" 
+                                   name="matricule" 
+                                   class="form-control @error('matricule') is-invalid @enderror" 
+                                   placeholder="Entrez votre numéro d'inscription" 
+                                   value="{{ old('matricule') }}" 
+                                   required>
+                            @error('matricule')
+                                <div class="invalid-feedback">
+                                    <i class="fas fa-exclamation-triangle me-1"></i>
+                                    {{ $message }}
+                                </div>
+                            @enderror
+                        </div>
+
+                        <!-- Password Field -->
+                        <div class="mb-3">
+                            <label for="password" class="form-label fw-medium">
+                                <i class="fas fa-lock me-2 text-success"></i>
+                                Mot de passe
+                            </label>
+                            <div class="position-relative">
+                                <input type="password" 
+                                       id="password" 
+                                       name="password" 
+                                       class="form-control password-field @error('password') is-invalid @enderror" 
+                                       placeholder="Entrez votre mot de passe" 
+                                       required>
+                                <button type="button" class="password-toggle" onclick="togglePassword()">
+                                    <i class="fas fa-eye" id="toggleIcon"></i>
+                                </button>
+                                @error('password')
+                                    <div class="invalid-feedback">
+                                        <i class="fas fa-exclamation-triangle me-1"></i>
+                                        {{ $message }}
+                                    </div>
+                                @enderror
+                            </div>
+                        </div>
+
+                        <!-- Remember Me & Forgot Password -->
+                        <div class="mb-4 d-flex justify-content-between align-items-center">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="remember" name="remember">
+                                <label class="form-check-label text-muted" for="remember" style="font-size: 0.85rem;">
+                                    Se souvenir de moi
+                                </label>
+                            </div>
+                            <div>
+                                <a href="#" class="text-success text-decoration-none" style="font-size: 0.85rem;">
+                                    Mot de passe oublié ?
+                                </a>
+                            </div>
+                        </div>
+
+                        <!-- Login Button -->
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-login text-white fw-semibold" id="loginBtn">
+                                <span id="buttonText">
+                                    <i class="fas fa-sign-in-alt me-2"></i>
+                                    Se connecter
+                                </span>
+                                <span id="loadingText" class="d-none">
+                                    <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                                    Connexion...
+                                </span>
+                            </button>
+                        </div>
+                    </form>
+
+                    <!-- Footer -->
+                    <div class="text-center mt-4">
+                        <small class="text-muted">
+                            <i class="fas fa-shield-alt me-1"></i>
+                            Système de Gestion des Coopératives Agricoles
+                        </small>
+                    </div>
+                </div>
     </div>
 
+    <!-- Bootstrap 5 JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    
     <script>
         function togglePassword() {
             const passwordInput = document.getElementById('password');
@@ -367,7 +303,16 @@
             }
         }
 
-       
+        
+
+        // Auto-dismiss alerts after 5 seconds
+        setTimeout(function() {
+            const alerts = document.querySelectorAll('.alert-dismissible');
+            alerts.forEach(function(alert) {
+                const bsAlert = new bootstrap.Alert(alert);
+                bsAlert.close();
+            });
+        }, 5000);
     </script>
 </body>
 </html>

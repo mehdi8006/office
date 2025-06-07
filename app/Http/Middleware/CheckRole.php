@@ -5,6 +5,8 @@ namespace App\Http\Middleware;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
+
 use Symfony\Component\HttpFoundation\Response;
 
 class CheckRole
@@ -19,7 +21,7 @@ class CheckRole
         // Check if user is authenticated
         if (!Auth::check()) {
             return redirect()->route('login')->withErrors([
-                'access' => 'يجب تسجيل الدخول للوصول إلى هذه الصفحة'
+                'access' => 'Vous devez être connecté pour accéder à cette page'
             ]);
         }
 
@@ -32,7 +34,7 @@ class CheckRole
             $request->session()->regenerateToken();
             
             return redirect()->route('login')->withErrors([
-                'matricule' => 'الحساب غير مفعل. يرجى الاتصال بالمسؤول'
+                'matricule' => 'Compte inactif. Veuillez contacter l\'administrateur'
             ]);
         }
 
@@ -44,7 +46,7 @@ class CheckRole
         // Check if user has any of the required roles
         if (!in_array($user->role, $roles)) {
             // Log unauthorized access attempt
-            \Log::warning('Unauthorized access attempt', [
+            \Log::warning('Tentative d\'accès non autorisé', [
                 'user_id' => $user->id_utilisateur,
                 'user_role' => $user->role,
                 'required_roles' => $roles,
@@ -64,8 +66,8 @@ class CheckRole
             $route = $redirectRoutes[$user->role] ?? 'login';
             
             return redirect()->route($route)->withErrors([
-                'access' => 'ليس لديك صلاحية للوصول إلى هذه الصفحة'
-            ])->with('warning', 'تم توجيهك إلى لوحة التحكم الخاصة بك');
+                'access' => 'Vous n\'avez pas l\'autorisation d\'accéder à cette page'
+            ])->with('warning', 'Vous avez été redirigé vers votre tableau de bord');
         }
 
         // Store user role in session for quick access
