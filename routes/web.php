@@ -3,6 +3,12 @@
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\Gestionnaire\MembreEleveurController;
 use App\Http\Controllers\Gestionnaire\ReceptionController;
+use App\Http\Controllers\Gestionnaire\LivraisonUsineController;
+
+use App\Http\Controllers\Gestionnaire\PaiementController;
+use App\Http\Controllers\Gestionnaire\StockController;
+
+
 
 use Illuminate\Support\Facades\Route;
 
@@ -73,7 +79,27 @@ Route::middleware('auth')->group(function () {
             Route::post('/', [ReceptionController::class, 'store'])->name('store');
             Route::delete('/{reception}', [ReceptionController::class, 'destroy'])->name('destroy');
         });
+         // Gestion du Stock
+        Route::prefix('stock')->name('stock.')->group(function () {
+            Route::get('/', [StockController::class, 'index'])->name('index');
+            Route::get('/{date}', [StockController::class, 'show'])->name('show');
+        });
 
+        // Gestion des Livraisons vers l'Usine
+        Route::prefix('livraisons')->name('livraisons.')->group(function () {
+            Route::get('/', [LivraisonUsineController::class, 'index'])->name('index');
+            Route::get('/create', [LivraisonUsineController::class, 'create'])->name('create');
+            Route::post('/', [LivraisonUsineController::class, 'store'])->name('store');
+            Route::put('/{livraison}/validate', [LivraisonUsineController::class, 'validate'])->name('validate');
+            Route::delete('/{livraison}', [LivraisonUsineController::class, 'destroy'])->name('destroy');
+        });
+
+        // Gestion des Paiements de l'Usine
+        Route::prefix('paiements')->name('paiements.')->group(function () {
+            Route::get('/', [PaiementController::class, 'index'])->name('index');
+            Route::post('/calculer-periode', [PaiementController::class, 'calculerPeriode'])->name('calculer-periode');
+            Route::put('/{paiement}/marquer-paye', [PaiementController::class, 'marquerPaye'])->name('marquer-paye');
+        });
 
     });
 

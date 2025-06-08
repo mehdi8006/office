@@ -143,12 +143,38 @@
                             </a>
                         </li>
                         <li class="nav-item">
-                        <a class="nav-link {{ request()->routeIs('gestionnaire.receptions.*') ? 'active' : '' }}" 
-                        href="{{ route('gestionnaire.receptions.index') }}">
-                        <i class="fas fa-tint me-2"></i>
-                        Réceptions de Lait
-                        </a>
+                            <a class="nav-link {{ request()->routeIs('gestionnaire.receptions.*') ? 'active' : '' }}" 
+                               href="{{ route('gestionnaire.receptions.index') }}">
+                                <i class="fas fa-tint me-2"></i>
+                                Réceptions de Lait
+                            </a>
                         </li>
+                        
+                        <li class="nav-item">
+                            <a class="nav-link {{ request()->routeIs('gestionnaire.stock.*') ? 'active' : '' }}" 
+                               href="{{ route('gestionnaire.stock.index') }}">
+                                <i class="fas fa-warehouse me-2"></i>
+                                Gestion du Stock
+                            </a>
+                        </li>
+                        
+                        <li class="nav-item">
+                            <a class="nav-link {{ request()->routeIs('gestionnaire.livraisons.*') ? 'active' : '' }}" 
+                               href="{{ route('gestionnaire.livraisons.index') }}">
+                                <i class="fas fa-truck me-2"></i>
+                                Livraisons Usine
+                            </a>
+                        </li>
+                        
+                        <li class="nav-item">
+                            <a class="nav-link {{ request()->routeIs('gestionnaire.paiements.*') ? 'active' : '' }}" 
+                               href="{{ route('gestionnaire.paiements.index') }}">
+                                <i class="fas fa-money-bill me-2"></i>
+                                Paiements Usine
+                            </a>
+                        </li>
+
+                        <hr class="text-white-50">
 
                         <hr class="text-white-50">
                         
