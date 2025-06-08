@@ -1,18 +1,13 @@
 @extends('gestionnaire.layouts.app')
 
 @section('title', 'Gestion des Paiements Usine')
-@section('page-title', 'Gestion des Paiements Usine')
+@section('page-title', 'Paiements Usine par Quinzaines')
 
 @section('page-actions')
     <div class="btn-group">
         <a href="{{ route('gestionnaire.livraisons.index') }}" class="btn btn-outline-secondary">
             <i class="fas fa-truck me-2"></i>Voir Livraisons
         </a>
-          @if(count($pendingPeriods) > 0)
-            <button class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#calculerPaiementsModal">
-                <i class="fas fa-calculator me-2"></i>Calculer Paiements
-            </button>
-        @endif
     </div>
 @endsection
 
@@ -24,12 +19,29 @@
             <div class="card-body">
                 <div class="d-flex align-items-center">
                     <div class="flex-grow-1">
-                        <h6 class="text-muted mb-1">Total Paiements</h6>
-                        <h3 class="mb-0">{{ number_format($stats['total_paiements']) }}</h3>
-                        <small class="text-muted">Période sélectionnée</small>
+                        <h6 class="text-muted mb-1">Total Quinzaines</h6>
+                        <h3 class="mb-0">{{ number_format($stats['total_quinzaines']) }}</h3>
+                        <small class="text-muted">Période affichée</small>
                     </div>
                     <div class="ms-3">
-                        <i class="fas fa-money-bill text-primary" style="font-size: 2rem;"></i>
+                        <i class="fas fa-calendar-alt text-primary" style="font-size: 2rem;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-3">
+        <div class="card stats-card h-100">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="flex-grow-1">
+                        <h6 class="text-muted mb-1">Quantité Totale</h6>
+                        <h3 class="mb-0 text-info">{{ number_format($stats['total_quantite'], 1) }}L</h3>
+                        <small class="text-muted">{{ $stats['total_livraisons'] }} livraisons</small>
+                    </div>
+                    <div class="ms-3">
+                        <i class="fas fa-tint text-info" style="font-size: 2rem;"></i>
                     </div>
                 </div>
             </div>
@@ -58,29 +70,12 @@
             <div class="card-body">
                 <div class="d-flex align-items-center">
                     <div class="flex-grow-1">
-                        <h6 class="text-muted mb-1">En Attente</h6>
-                        <h3 class="mb-0 text-warning">{{ number_format($stats['montant_en_attente'], 2) }}</h3>
-                        <small class="text-muted">{{ $stats['paiements_en_attente'] }} paiement(s)</small>
+                        <h6 class="text-muted mb-1">Montant Payé</h6>
+                        <h3 class="mb-0 text-warning">{{ number_format($stats['montant_paye'], 2) }}</h3>
+                        <small class="text-muted">DH</small>
                     </div>
                     <div class="ms-3">
-                        <i class="fas fa-clock text-warning" style="font-size: 2rem;"></i>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="col-xl-3 col-md-6 mb-3">
-        <div class="card stats-card h-100">
-            <div class="card-body">
-                <div class="d-flex align-items-center">
-                    <div class="flex-grow-1">
-                        <h6 class="text-muted mb-1">Payés</h6>
-                        <h3 class="mb-0 text-info">{{ number_format($stats['montant_paye'], 2) }}</h3>
-                        <small class="text-muted">{{ $stats['paiements_payes'] }} paiement(s)</small>
-                    </div>
-                    <div class="ms-3">
-                        <i class="fas fa-check-circle text-info" style="font-size: 2rem;"></i>
+                        <i class="fas fa-check-circle text-warning" style="font-size: 2rem;"></i>
                     </div>
                 </div>
             </div>
@@ -88,36 +83,40 @@
     </div>
 </div>
 
-<!-- Pending Periods Alert -->
-@if(count($pendingPeriods)> 0)
-<div class="alert alert-warning">
-    <div class="d-flex align-items-center">
-        <i class="fas fa-exclamation-triangle me-3" style="font-size: 1.5rem;"></i>
-        <div class="flex-grow-1">
-            <h6 class="alert-heading mb-1">Périodes en attente de calcul</h6>
-            <p class="mb-2">{{ count($pendingPeriods) }} période(s) ont des livraisons validées non payées.</p>
-            <button class="btn btn-warning btn-sm" data-bs-toggle="modal" data-bs-target="#calculerPaiementsModal">
-                <i class="fas fa-calculator me-1"></i>Calculer maintenant
-            </button>
+<!-- Status Summary Cards -->
+<div class="row mb-4">
+    <div class="col-md-4 mb-2">
+        <div class="card border-left-danger h-100">
+            <div class="card-body p-3 text-center">
+                <h4 class="text-danger mb-1">{{ $stats['quinzaines_non_calculees'] }}</h4>
+                <small class="text-muted">Non Calculées</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4 mb-2">
+        <div class="card border-left-warning h-100">
+            <div class="card-body p-3 text-center">
+                <h4 class="text-warning mb-1">{{ $stats['quinzaines_calculees'] }}</h4>
+                <small class="text-muted">En Attente</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4 mb-2">
+        <div class="card border-left-success h-100">
+            <div class="card-body p-3 text-center">
+                <h4 class="text-success mb-1">{{ $stats['quinzaines_payees'] }}</h4>
+                <small class="text-muted">Payées</small>
+            </div>
         </div>
     </div>
 </div>
-@endif
-
-<!-- Livraisons non payées Alert -->
-@if($stats['livraisons_non_payees'] > 0)
-<div class="alert alert-info">
-    <i class="fas fa-info-circle me-2"></i>
-    <strong>{{ $stats['livraisons_non_payees'] }} livraison(s) validée(s)</strong> en attente de paiement.
-</div>
-@endif
 
 <!-- Filters Card -->
 <div class="card mb-4">
     <div class="card-header">
         <div class="d-flex justify-content-between align-items-center">
             <h5 class="card-title mb-0">
-                <i class="fas fa-filter me-2"></i>Filtres et Recherche
+                <i class="fas fa-filter me-2"></i>Filtres
             </h5>
             <div class="d-flex align-items-center">
                 <span class="text-muted me-2">Coopérative :</span>
@@ -127,292 +126,242 @@
     </div>
     <div class="card-body">
         <form method="GET" action="{{ route('gestionnaire.paiements.index') }}" class="row g-3">
-            <!-- Date Range -->
-            <div class="col-md-3">
-                <label for="date_debut" class="form-label">Date Début</label>
-                <input type="date" 
-                       class="form-control" 
-                       id="date_debut" 
-                       name="date_debut" 
-                       value="{{ request('date_debut', now()->subDays(60)->format('Y-m-d')) }}">
-            </div>
-
-            <div class="col-md-3">
-                <label for="date_fin" class="form-label">Date Fin</label>
-                <input type="date" 
-                       class="form-control" 
-                       id="date_fin" 
-                       name="date_fin" 
-                       value="{{ request('date_fin', now()->format('Y-m-d')) }}">
-            </div>
-
-            <!-- Status Filter -->
-            <div class="col-md-3">
-                <label for="statut" class="form-label">Statut</label>
-                <select class="form-select" id="statut" name="statut">
-                    <option value="">Tous les statuts</option>
-                    <option value="en_attente" {{ request('statut') === 'en_attente' ? 'selected' : '' }}>En Attente</option>
-                    <option value="paye" {{ request('statut') === 'paye' ? 'selected' : '' }}>Payé</option>
+            <!-- Month Selection -->
+            <div class="col-md-6">
+                <label for="mois" class="form-label">Mois</label>
+                <select class="form-select" id="mois" name="mois">
+                    @for($m = 1; $m <= 12; $m++)
+                        <option value="{{ $m }}" {{ $selectedMonth == $m ? 'selected' : '' }}>
+                            {{ \Carbon\Carbon::create()->month($m)->translatedFormat('F') }}
+                        </option>
+                    @endfor
                 </select>
             </div>
 
-            <!-- Buttons -->
-            <div class="col-md-3">
-                <label class="form-label">&nbsp;</label>
-                <div class="d-grid gap-2">
-                    <button type="submit" class="btn btn-primary">
-                        <i class="fas fa-search me-1"></i>Filtrer
-                    </button>
-                    <a href="{{ route('gestionnaire.paiements.index') }}" class="btn btn-outline-secondary">
-                        <i class="fas fa-times me-1"></i>Reset
-                    </a>
-                </div>
+            <!-- Year Selection -->
+            <div class="col-md-6">
+                <label for="annee" class="form-label">Année</label>
+                <select class="form-select" id="annee" name="annee">
+                    @for($y = now()->year; $y >= now()->year - 2; $y--)
+                        <option value="{{ $y }}" {{ $selectedYear == $y ? 'selected' : '' }}>
+                            {{ $y }}
+                        </option>
+                    @endfor
+                </select>
+            </div>
+
+            <div class="col-12">
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-search me-1"></i>Filtrer
+                </button>
+                <a href="{{ route('gestionnaire.paiements.index') }}" class="btn btn-outline-secondary ms-2">
+                    <i class="fas fa-times me-1"></i>Reset
+                </a>
             </div>
         </form>
     </div>
 </div>
 
-<!-- Paiements Table -->
-<div class="card">
-    <div class="card-header">
-        <div class="d-flex justify-content-between align-items-center">
-            <h5 class="card-title mb-0">
-                <i class="fas fa-list me-2"></i>Liste des Paiements
-                <span class="badge bg-primary ms-2">{{ $paiements->total() }} paiement(s)</span>
-            </h5>
-            
-            <!-- Sort Options -->
-            <div class="dropdown">
-                <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
-                    <i class="fas fa-sort me-1"></i>Trier par
-                </button>
-                <ul class="dropdown-menu">
-                    <li><a class="dropdown-item" href="{{ request()->fullUrlWithQuery(['sort_by' => 'date_paiement', 'sort_order' => 'desc']) }}">
-                        <i class="fas fa-calendar-alt me-2"></i>Date (Plus récent)
-                    </a></li>
-                    <li><a class="dropdown-item" href="{{ request()->fullUrlWithQuery(['sort_by' => 'date_paiement', 'sort_order' => 'asc']) }}">
-                        <i class="fas fa-calendar-alt me-2"></i>Date (Plus ancien)
-                    </a></li>
-                    <li><a class="dropdown-item" href="{{ request()->fullUrlWithQuery(['sort_by' => 'montant', 'sort_order' => 'desc']) }}">
-                        <i class="fas fa-money-bill me-2"></i>Montant (+ élevé)
-                    </a></li>
-                    <li><a class="dropdown-item" href="{{ request()->fullUrlWithQuery(['sort_by' => 'statut', 'sort_order' => 'asc']) }}">
-                        <i class="fas fa-flag me-2"></i>Statut
-                    </a></li>
-                </ul>
-            </div>
-        </div>
-    </div>
-    
-    <div class="card-body p-0">
-        @if($paiements->count() > 0)
-            <div class="table-responsive">
-                <table class="table table-hover mb-0">
-                    <thead class="table-light">
-                        <tr>
-                            <th>Date Paiement</th>
-                            <th>Livraison</th>
-                            <th>Montant</th>
-                            <th>Statut</th>
-                            <th>Créé le</th>
-                            <th width="100">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach($paiements as $paiement)
-                            <tr>
-                                <td>
-                                    <div>
-                                        <strong>{{ $paiement->date_paiement->format('d/m/Y') }}</strong>
-                                        <br>
-                                        <small class="text-muted">{{ $paiement->date_paiement->translatedFormat('l') }}</small>
-                                    </div>
-                                </td>
-                                
-                                <td>
-                                    <div>
-                                        <strong>{{ $paiement->livraison->date_livraison->format('d/m/Y') }}</strong>
-                                        <br>
-                                        <small class="text-muted">{{ $paiement->livraison->quantite_formattee }}</small>
-                                    </div>
-                                </td>
-                                
-                                <td>
-                                    <span class="fw-bold text-success">{{ $paiement->montant_formattee }}</span>
-                                </td>
-                                
-                                <td>
-                                    <span class="badge bg-{{ $paiement->statut_color }}">
-                                        {{ $paiement->statut_label }}
-                                    </span>
-                                </td>
-                                
-                                <td>
-                                    <div>
-                                        <small>{{ $paiement->created_at->format('d/m/Y H:i') }}</small>
-                                        <br>
-                                        <small class="text-muted">{{ $paiement->created_at->diffForHumans() }}</small>
-                                    </div>
-                                </td>
-                                
-                                <td>
-                                    <div class="d-flex gap-1">
-                                        @if($paiement->statut === 'en_attente')
-                                            <!-- Marquer comme payé -->
-                                            <form action="{{ route('gestionnaire.paiements.marquer-paye', $paiement) }}" 
-                                                  method="POST" 
-                                                  style="display: inline;"
-                                                  onsubmit="return confirm('Marquer ce paiement comme payé ?\n\nMontant: {{ $paiement->montant_formattee }}\nDate: {{ $paiement->date_paiement->format('d/m/Y') }}')">
-                                                @csrf
-                                                @method('PUT')
-                                                <button type="submit" 
-                                                        class="btn btn-sm btn-outline-success" 
-                                                        title="Marquer comme payé">
-                                                    <i class="fas fa-check"></i>
-                                                </button>
-                                            </form>
-                                        @else
-                                            <div class="text-center w-100">
-                                                <span class="text-success small">
-                                                    <i class="fas fa-check-circle me-1"></i>Payé
-                                                </span>
-                                            </div>
-                                        @endif
-                                    </div>
-                                </td>
-                            </tr>
-                        @endforeach
-                    </tbody>
-                </table>
-            </div>
-
-            <!-- Pagination -->
-            <div class="card-footer">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div class="text-muted">
-                        Affichage de {{ $paiements->firstItem() }} à {{ $paiements->lastItem() }} 
-                        sur {{ $paiements->total() }} paiements
-                    </div>
-                    <div>
-                        {{ $paiements->links() }}
+<!-- Quinzaines Cards -->
+<div class="row">
+    @forelse($quinzaines as $quinzaine)
+        <div class="col-lg-6 mb-4">
+            <div class="card h-100 quinzaine-card border-{{ $quinzaine['statut_color'] }}">
+                <div class="card-header bg-{{ $quinzaine['statut_color'] }} bg-opacity-10">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h6 class="card-title mb-0">
+                            <i class="fas fa-calendar me-2"></i>
+                            {{ $quinzaine['periode_label'] }}
+                        </h6>
+                        <span class="badge bg-{{ $quinzaine['statut_color'] }}">
+                            @switch($quinzaine['statut'])
+                                @case('non_calcule')
+                                    Non Calculé
+                                    @break
+                                @case('calcule')
+                                    En Attente
+                                    @break
+                                @case('paye')
+                                    Payé
+                                    @break
+                            @endswitch
+                        </span>
                     </div>
                 </div>
-            </div>
-        @else
-            <div class="text-center py-5">
-                <i class="fas fa-money-bill text-muted" style="font-size: 4rem;"></i>
-                <h5 class="text-muted mt-3">Aucun paiement trouvé</h5>
-                <p class="text-muted">Aucun paiement ne correspond aux critères de recherche.</p>
-                @if(count($pendingPeriods)> 0)
-                    <button class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#calculerPaiementsModal">
-                        <i class="fas fa-calculator me-2"></i>Calculer les premiers paiements
-                    </button>
-                @endif
-            </div>
-        @endif
-    </div>
-</div>
-
-<!-- Calculate Payments Modal -->
-@if(count($pendingPeriods) > 0)
-<div class="modal fade" id="calculerPaiementsModal" tabindex="-1">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">
-                    <i class="fas fa-calculator me-2"></i>
-                    Calculer les Paiements
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <div class="alert alert-info">
-                    <i class="fas fa-info-circle me-2"></i>
-                    <strong>Information :</strong> Les paiements sont calculés automatiquement tous les 15 jours 
-                    (1-15 et 16-fin du mois) pour toutes les livraisons validées.
-                </div>
-
-                <h6 class="mb-3">Périodes disponibles pour calcul :</h6>
                 
-                @foreach($pendingPeriods as $period)
-                    <div class="card mb-3">
-                        <div class="card-body">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <div>
-                                    <h6 class="mb-1">{{ $period['type'] }}</h6>
-                                    <p class="text-muted mb-0">{{ $period['label'] }}</p>
+                <div class="card-body">
+                    @if($quinzaine['total_quantite'] > 0)
+                        <!-- Totals -->
+                        <div class="row mb-3">
+                            <div class="col-6">
+                                <div class="text-center">
+                                    <h4 class="text-info mb-1">{{ number_format($quinzaine['total_quantite'], 1) }}L</h4>
+                                    <small class="text-muted">Quantité Totale</small>
                                 </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="text-center">
+                                    <h4 class="text-success mb-1">{{ number_format($quinzaine['total_montant'], 2) }}</h4>
+                                    <small class="text-muted">Montant Total (DH)</small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Livraisons count -->
+                        <div class="text-center mb-3">
+                            <span class="badge bg-light text-dark">
+                                <i class="fas fa-truck me-1"></i>
+                                {{ $quinzaine['livraisons_count'] }} livraison(s)
+                            </span>
+                        </div>
+
+                        <!-- Payment details if calculated -->
+                        @if($quinzaine['statut'] !== 'non_calcule')
+                            <div class="row mb-3">
+                                @if($quinzaine['montant_paye'] > 0)
+                                    <div class="col-6">
+                                        <div class="text-center">
+                                            <h6 class="text-success mb-1">{{ number_format($quinzaine['montant_paye'], 2) }} DH</h6>
+                                            <small class="text-muted">Payé</small>
+                                        </div>
+                                    </div>
+                                @endif
+                                @if($quinzaine['montant_en_attente'] > 0)
+                                    <div class="col-6">
+                                        <div class="text-center">
+                                            <h6 class="text-warning mb-1">{{ number_format($quinzaine['montant_en_attente'], 2) }} DH</h6>
+                                            <small class="text-muted">En Attente</small>
+                                        </div>
+                                    </div>
+                                @endif
+                            </div>
+
+                            <!-- Progress bar if partially paid -->
+                            @if($quinzaine['total_montant'] > 0)
+                                @php
+                                    $percentagePaye = ($quinzaine['montant_paye'] / $quinzaine['total_montant']) * 100;
+                                    $percentageAttente = ($quinzaine['montant_en_attente'] / $quinzaine['total_montant']) * 100;
+                                @endphp
+                                
+                                <div class="progress mb-3" style="height: 15px;">
+                                    <div class="progress-bar bg-success" 
+                                         style="width: {{ $percentagePaye }}%"
+                                         title="Payé: {{ number_format($percentagePaye, 1) }}%">
+                                    </div>
+                                    <div class="progress-bar bg-warning" 
+                                         style="width: {{ $percentageAttente }}%"
+                                         title="En attente: {{ number_format($percentageAttente, 1) }}%">
+                                    </div>
+                                </div>
+                            @endif
+                        @endif
+
+                        <!-- Action Buttons -->
+                        <div class="text-center">
+                            @if($quinzaine['peut_calculer'])
                                 <form action="{{ route('gestionnaire.paiements.calculer-periode') }}" 
                                       method="POST" 
                                       style="display: inline;">
                                     @csrf
-                                    <input type="hidden" name="periode_debut" value="{{ $period['debut'] }}">
-                                    <input type="hidden" name="periode_fin" value="{{ $period['fin'] }}">
+                                    <input type="hidden" name="periode_debut" value="{{ $quinzaine['date_debut'] }}">
+                                    <input type="hidden" name="periode_fin" value="{{ $quinzaine['date_fin'] }}">
                                     <button type="submit" 
                                             class="btn btn-warning"
-                                            onclick="return confirm('Calculer les paiements pour la période {{ $period['label'] }} ?')">
-                                        <i class="fas fa-calculator me-1"></i>Calculer
+                                            onclick="return confirm('Calculer les paiements pour la période {{ $quinzaine['periode_label'] }} ?\n\nQuantité: {{ number_format($quinzaine['total_quantite'], 1) }}L\nMontant: {{ number_format($quinzaine['total_montant'], 2) }} DH')">
+                                        <i class="fas fa-calculator me-1"></i>Calculer Paiements
                                     </button>
                                 </form>
-                            </div>
+                            @elseif($quinzaine['statut'] === 'calcule')
+                                <span class="text-warning">
+                                    <i class="fas fa-clock me-1"></i>En attente de validation usine
+                                </span>
+                            @elseif($quinzaine['statut'] === 'paye')
+                                <span class="text-success">
+                                    <i class="fas fa-check-circle me-1"></i>Paiements effectués
+                                </span>
+                            @elseif(!$quinzaine['est_passe'])
+                                <span class="text-muted">
+                                    <i class="fas fa-hourglass-half me-1"></i>Période en cours
+                                </span>
+                            @endif
                         </div>
-                    </div>
-                @endforeach
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                    <i class="fas fa-times me-1"></i>Fermer
-                </button>
+                    @else
+                        <!-- No deliveries -->
+                        <div class="text-center text-muted py-3">
+                            <i class="fas fa-truck" style="font-size: 2rem; opacity: 0.3;"></i>
+                            <p class="mt-2 mb-0">Aucune livraison pour cette période</p>
+                        </div>
+                    @endif
+                </div>
+
+                <!-- Footer with period dates -->
+                <div class="card-footer bg-light">
+                    <small class="text-muted">
+                        <i class="fas fa-calendar-alt me-1"></i>
+                        {{ \Carbon\Carbon::parse($quinzaine['date_debut'])->format('d/m/Y') }} - 
+                        {{ \Carbon\Carbon::parse($quinzaine['date_fin'])->format('d/m/Y') }}
+                    </small>
+                </div>
             </div>
         </div>
-    </div>
+    @empty
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body text-center py-5">
+                    <i class="fas fa-calendar-times text-muted" style="font-size: 4rem;"></i>
+                    <h5 class="text-muted mt-3">Aucune donnée trouvée</h5>
+                    <p class="text-muted">Aucune quinzaine trouvée pour la période sélectionnée.</p>
+                </div>
+            </div>
+        </div>
+    @endforelse
 </div>
-@endif
 
-<!-- Summary Card -->
-@if($stats['total_paiements'] > 0)
+<!-- Overall Summary Card -->
+@if($stats['total_montant'] > 0)
 <div class="card mt-4">
     <div class="card-header bg-light">
         <h6 class="card-title mb-0">
-            <i class="fas fa-chart-pie me-2"></i>Résumé des Paiements
+            <i class="fas fa-chart-pie me-2"></i>Résumé Global
         </h6>
     </div>
     <div class="card-body">
         <div class="row text-center">
-            <div class="col-md-4">
-                <div class="border-end">
-                    <h5 class="text-success mb-1">{{ number_format($stats['total_montant'], 2) }} DH</h5>
-                    <small class="text-muted">Montant Total</small>
-                </div>
+            <div class="col-md-3">
+                <h5 class="text-info mb-1">{{ number_format($stats['total_quantite'], 1) }} L</h5>
+                <small class="text-muted">Quantité Totale</small>
             </div>
-            <div class="col-md-4">
-                <div class="border-end">
-                    <h5 class="text-warning mb-1">{{ number_format($stats['montant_en_attente'], 2) }} DH</h5>
-                    <small class="text-muted">En Attente</small>
-                </div>
+            <div class="col-md-3">
+                <h5 class="text-success mb-1">{{ number_format($stats['total_montant'], 2) }} DH</h5>
+                <small class="text-muted">Montant Total</small>
             </div>
-            <div class="col-md-4">
-                <h5 class="text-info mb-1">{{ number_format($stats['montant_paye'], 2) }} DH</h5>
-                <small class="text-muted">Payés</small>
+            <div class="col-md-3">
+                <h5 class="text-warning mb-1">{{ number_format($stats['montant_en_attente'], 2) }} DH</h5>
+                <small class="text-muted">En Attente</small>
+            </div>
+            <div class="col-md-3">
+                <h5 class="text-primary mb-1">{{ number_format($stats['montant_paye'], 2) }} DH</h5>
+                <small class="text-muted">Payé</small>
             </div>
         </div>
-        
+
+        <!-- Global progress bar -->
         @if($stats['total_montant'] > 0)
-            <div class="progress mt-3" style="height: 20px;">
+            <div class="progress mt-3" style="height: 25px;">
                 @php
-                    $percentagePaye = ($stats['montant_paye'] / $stats['total_montant']) * 100;
-                    $percentageAttente = ($stats['montant_en_attente'] / $stats['total_montant']) * 100;
+                    $globalPercentagePaye = ($stats['montant_paye'] / $stats['total_montant']) * 100;
+                    $globalPercentageAttente = ($stats['montant_en_attente'] / $stats['total_montant']) * 100;
                 @endphp
                 
-                <div class="progress-bar bg-info" 
-                     style="width: {{ $percentagePaye }}%"
-                     title="Payés: {{ number_format($percentagePaye, 1) }}%">
-                    {{ number_format($percentagePaye, 1) }}%
+                <div class="progress-bar bg-success" 
+                     style="width: {{ $globalPercentagePaye }}%"
+                     title="Payé: {{ number_format($globalPercentagePaye, 1) }}%">
+                    {{ number_format($globalPercentagePaye, 1) }}% Payé
                 </div>
                 <div class="progress-bar bg-warning" 
-                     style="width: {{ $percentageAttente }}%"
-                     title="En attente: {{ number_format($percentageAttente, 1) }}%">
-                    {{ number_format($percentageAttente, 1) }}%
+                     style="width: {{ $globalPercentageAttente }}%"
+                     title="En attente: {{ number_format($globalPercentageAttente, 1) }}%">
+                    {{ number_format($globalPercentageAttente, 1) }}% En Attente
                 </div>
             </div>
         @endif
@@ -420,3 +369,40 @@
 </div>
 @endif
 @endsection
+
+@push('styles')
+<style>
+.quinzaine-card {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.quinzaine-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+}
+
+.border-left-danger {
+    border-left: 4px solid #dc3545 !important;
+}
+
+.border-left-warning {
+    border-left: 4px solid #ffc107 !important;
+}
+
+.border-left-success {
+    border-left: 4px solid #28a745 !important;
+}
+
+.bg-opacity-10 {
+    --bs-bg-opacity: 0.1;
+}
+
+.progress {
+    border-radius: 10px;
+}
+
+.progress-bar {
+    border-radius: 10px;
+}
+</style>
+@endpush

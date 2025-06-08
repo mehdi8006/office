@@ -69,48 +69,165 @@ class PaiementController extends Controller
     }
 
     /**
-     * Display a listing of paiements with filters and pagination.
+     * Display quinzaines with their payment status and totals.
      */
     public function index(Request $request)
     {
         $cooperativeId = $this->getCurrentCooperativeId();
         $cooperative = $this->getCurrentCooperative();
         
-        $query = PaiementCooperativeUsine::with(['cooperative', 'livraison'])
-            ->where('id_cooperative', $cooperativeId);
+        // Get selected month/year or default to current and previous month
+        $selectedMonth = $request->get('mois', now()->month);
+        $selectedYear = $request->get('annee', now()->year);
+        
+        // Calculate quinzaines data
+        $quinzaines = $this->getQuinzainesData($cooperativeId, $selectedMonth, $selectedYear);
+        
+        // Calculate overall statistics
+        $stats = $this->calculateQuinzainesStats($quinzaines);
 
-        // Filter by date range
-        if ($request->filled('date_debut') && $request->filled('date_fin')) {
-            $query->whereBetween('date_paiement', [$request->date_debut, $request->date_fin]);
-        } elseif ($request->filled('date_debut')) {
-            $query->whereDate('date_paiement', '>=', $request->date_debut);
-        } elseif ($request->filled('date_fin')) {
-            $query->whereDate('date_paiement', '<=', $request->date_fin);
-        } else {
-            // Par défaut, afficher les 60 derniers jours
-            $query->whereDate('date_paiement', '>=', now()->subDays(60));
+        return view('gestionnaire.paiements.index', compact('quinzaines', 'stats', 'cooperative', 'selectedMonth', 'selectedYear'));
+    }
+
+    /**
+     * Calculate quinzaines data for a specific month/year.
+     */
+    private function getQuinzainesData($cooperativeId, $month, $year)
+    {
+        $quinzaines = [];
+        
+        // Generate quinzaines for current and previous 2 months
+        for ($monthOffset = 0; $monthOffset <= 2; $monthOffset++) {
+            $date = Carbon::create($year, $month)->subMonths($monthOffset);
+            
+            // First quinzaine: 1st to 15th
+            $quinzaine1 = $this->calculateQuinzaineData(
+                $cooperativeId,
+                $date->copy()->startOfMonth(),
+                $date->copy()->startOfMonth()->addDays(14),
+                "1-15 " . $date->translatedFormat('F Y')
+            );
+            
+            // Second quinzaine: 16th to end of month
+            $quinzaine2 = $this->calculateQuinzaineData(
+                $cooperativeId,
+                $date->copy()->startOfMonth()->addDays(15),
+                $date->copy()->endOfMonth(),
+                "16-" . $date->endOfMonth()->day . " " . $date->translatedFormat('F Y')
+            );
+            
+            $quinzaines[] = $quinzaine1;
+            $quinzaines[] = $quinzaine2;
+        }
+        
+        // Sort by date desc (most recent first)
+        usort($quinzaines, function($a, $b) {
+            return $b['date_fin'] <=> $a['date_fin'];
+        });
+        
+        return $quinzaines;
+    }
+
+    /**
+     * Calculate data for a specific quinzaine period.
+     */
+    private function calculateQuinzaineData($cooperativeId, $dateDebut, $dateFin, $label)
+    {
+        // Get validated livraisons for this period
+        $livraisons = LivraisonUsine::where('id_cooperative', $cooperativeId)
+            ->where('statut', 'validee')
+            ->whereBetween('date_livraison', [$dateDebut, $dateFin])
+            ->get();
+
+        // Calculate totals
+        $totalQuantite = $livraisons->sum('quantite_litres');
+        $totalMontant = $livraisons->sum('montant_total');
+        $nombreLivraisons = $livraisons->count();
+
+        // Check payment status
+        $paiementsExistants = PaiementCooperativeUsine::where('id_cooperative', $cooperativeId)
+            ->whereBetween('date_paiement', [$dateDebut, $dateFin])
+            ->get();
+
+        $montantPaye = $paiementsExistants->where('statut', 'paye')->sum('montant');
+        $montantEnAttente = $paiementsExistants->where('statut', 'en_attente')->sum('montant');
+        $totalPaiements = $paiementsExistants->sum('montant');
+
+        // Determine status
+        $statut = 'non_calcule';
+        $statutColor = 'secondary';
+        $peutCalculer = false;
+
+        if ($totalQuantite > 0) {
+            if ($totalPaiements >= $totalMontant) {
+                if ($montantPaye >= $totalMontant) {
+                    $statut = 'paye';
+                    $statutColor = 'success';
+                } else {
+                    $statut = 'calcule';
+                    $statutColor = 'warning';
+                }
+            } else {
+                $statut = 'non_calcule';
+                $statutColor = 'danger';
+                $peutCalculer = $dateFin->isPast(); // Only past periods can be calculated
+            }
         }
 
-        // Filter by status
-        if ($request->filled('statut')) {
-            $query->where('statut', $request->statut);
+        return [
+            'periode_label' => $label,
+            'date_debut' => $dateDebut->format('Y-m-d'),
+            'date_fin' => $dateFin->format('Y-m-d'),
+            'total_quantite' => $totalQuantite,
+            'total_montant' => $totalMontant,
+            'livraisons_count' => $nombreLivraisons,
+            'montant_paye' => $montantPaye,
+            'montant_en_attente' => $montantEnAttente,
+            'statut' => $statut,
+            'statut_color' => $statutColor,
+            'peut_calculer' => $peutCalculer,
+            'est_passe' => $dateFin->isPast(),
+        ];
+    }
+
+    /**
+     * Calculate overall statistics from quinzaines data.
+     */
+    private function calculateQuinzainesStats($quinzaines)
+    {
+        $stats = [
+            'total_quinzaines' => count($quinzaines),
+            'total_quantite' => 0,
+            'total_montant' => 0,
+            'total_livraisons' => 0,
+            'montant_paye' => 0,
+            'montant_en_attente' => 0,
+            'quinzaines_payees' => 0,
+            'quinzaines_calculees' => 0,
+            'quinzaines_non_calculees' => 0,
+        ];
+
+        foreach ($quinzaines as $quinzaine) {
+            $stats['total_quantite'] += $quinzaine['total_quantite'];
+            $stats['total_montant'] += $quinzaine['total_montant'];
+            $stats['total_livraisons'] += $quinzaine['livraisons_count'];
+            $stats['montant_paye'] += $quinzaine['montant_paye'];
+            $stats['montant_en_attente'] += $quinzaine['montant_en_attente'];
+
+            switch ($quinzaine['statut']) {
+                case 'paye':
+                    $stats['quinzaines_payees']++;
+                    break;
+                case 'calcule':
+                    $stats['quinzaines_calculees']++;
+                    break;
+                case 'non_calcule':
+                    $stats['quinzaines_non_calculees']++;
+                    break;
+            }
         }
 
-        // Sort
-        $sortBy = $request->get('sort_by', 'date_paiement');
-        $sortOrder = $request->get('sort_order', 'desc');
-        $query->orderBy($sortBy, $sortOrder);
-
-        // Paginate
-        $paiements = $query->paginate(15)->withQueryString();
-
-        // Calculate statistics
-        $stats = $this->calculatePaiementStats($cooperativeId, $request);
-
-        // Get pending periods for auto-calculation
-        $pendingPeriods = $this->getPendingPeriods($cooperativeId);
-
-        return view('gestionnaire.paiements.index', compact('paiements', 'stats', 'cooperative', 'pendingPeriods'));
+        return $stats;
     }
 
     /**
@@ -221,111 +338,5 @@ class PaiementController extends Controller
                 ->back()
                 ->with('error', 'Erreur lors de la mise à jour: ' . $e->getMessage());
         }
-    }
-
-    /**
-     * Calculate statistics for the paiements listing.
-     */
-    private function calculatePaiementStats($cooperativeId, $request)
-    {
-        $query = PaiementCooperativeUsine::where('id_cooperative', $cooperativeId);
-
-        // Apply same filters as main query
-        if ($request->filled('date_debut') && $request->filled('date_fin')) {
-            $query->whereBetween('date_paiement', [$request->date_debut, $request->date_fin]);
-        } elseif ($request->filled('date_debut')) {
-            $query->whereDate('date_paiement', '>=', $request->date_debut);
-        } elseif ($request->filled('date_fin')) {
-            $query->whereDate('date_paiement', '<=', $request->date_fin);
-        } else {
-            $query->whereDate('date_paiement', '>=', now()->subDays(60));
-        }
-
-        $totalPaiements = $query->count();
-        $totalMontant = $query->sum('montant');
-
-        // Count by status
-        $statsQuery = clone $query;
-        $enAttente = $statsQuery->where('statut', 'en_attente')->count();
-        $montantEnAttente = $statsQuery->sum('montant');
-        
-        $statsQuery = clone $query;
-        $payes = $statsQuery->where('statut', 'paye')->count();
-        $montantPaye = $statsQuery->sum('montant');
-
-        // Get pending livraisons (validated but not paid)
-        $livraisonsValidees = LivraisonUsine::where('id_cooperative', $cooperativeId)
-            ->where('statut', 'validee')
-            ->whereDoesntHave('paiements')
-            ->count();
-
-        return [
-            'total_paiements' => $totalPaiements,
-            'total_montant' => $totalMontant,
-            'paiements_en_attente' => $enAttente,
-            'montant_en_attente' => $montantEnAttente,
-            'paiements_payes' => $payes,
-            'montant_paye' => $montantPaye,
-            'livraisons_non_payees' => $livraisonsValidees,
-        ];
-    }
-
-    /**
-     * Get pending periods for automatic payment calculation.
-     */
-    private function getPendingPeriods($cooperativeId)
-    {
-        $periods = [];
-        $currentDate = now();
-
-        // Generate periods for current month and previous month
-        for ($monthOffset = 0; $monthOffset <= 1; $monthOffset++) {
-            $date = $currentDate->copy()->subMonths($monthOffset);
-            
-            // First period: 1st to 15th
-            $period1Start = $date->copy()->startOfMonth();
-            $period1End = $date->copy()->startOfMonth()->addDays(14);
-            
-            // Second period: 16th to end of month
-            $period2Start = $date->copy()->startOfMonth()->addDays(15);
-            $period2End = $date->copy()->endOfMonth();
-
-            // Check if period has ended and has validated livraisons without payments
-            if ($period1End->isPast()) {
-                $hasUnpaidLivraisons = LivraisonUsine::where('id_cooperative', $cooperativeId)
-                    ->where('statut', 'validee')
-                    ->whereBetween('date_livraison', [$period1Start, $period1End])
-                    ->whereDoesntHave('paiements')
-                    ->exists();
-
-                if ($hasUnpaidLivraisons) {
-                    $periods[] = [
-                        'label' => $period1Start->format('d/m/Y') . ' - ' . $period1End->format('d/m/Y'),
-                        'debut' => $period1Start->format('Y-m-d'),
-                        'fin' => $period1End->format('Y-m-d'),
-                        'type' => 'Première quinzaine ' . $period1Start->format('M Y')
-                    ];
-                }
-            }
-
-            if ($period2End->isPast()) {
-                $hasUnpaidLivraisons = LivraisonUsine::where('id_cooperative', $cooperativeId)
-                    ->where('statut', 'validee')
-                    ->whereBetween('date_livraison', [$period2Start, $period2End])
-                    ->whereDoesntHave('paiements')
-                    ->exists();
-
-                if ($hasUnpaidLivraisons) {
-                    $periods[] = [
-                        'label' => $period2Start->format('d/m/Y') . ' - ' . $period2End->format('d/m/Y'),
-                        'debut' => $period2Start->format('Y-m-d'),
-                        'fin' => $period2End->format('Y-m-d'),
-                        'type' => 'Deuxième quinzaine ' . $period2Start->format('M Y')
-                    ];
-                }
-            }
-        }
-
-        return $periods;
     }
 }

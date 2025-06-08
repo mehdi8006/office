@@ -4,11 +4,8 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\Gestionnaire\MembreEleveurController;
 use App\Http\Controllers\Gestionnaire\ReceptionController;
 use App\Http\Controllers\Gestionnaire\LivraisonUsineController;
-
 use App\Http\Controllers\Gestionnaire\PaiementController;
 use App\Http\Controllers\Gestionnaire\StockController;
-
-
 
 use Illuminate\Support\Facades\Route;
 
@@ -57,8 +54,7 @@ Route::middleware('auth')->group(function () {
         })->name('dashboard');
 
         // Gestion des Membres Éleveurs
-       
-           Route::prefix('membres')->name('membres.')->group(function () {
+        Route::prefix('membres')->name('membres.')->group(function () {
             Route::get('/', [MembreEleveurController::class, 'index'])->name('index');
             Route::get('/create', [MembreEleveurController::class, 'create'])->name('create');
             Route::post('/', [MembreEleveurController::class, 'store'])->name('store');
@@ -72,14 +68,16 @@ Route::middleware('auth')->group(function () {
             Route::patch('/{membre}/restore', [MembreEleveurController::class, 'restore'])->name('restore');
             Route::delete('/{membre}', [MembreEleveurController::class, 'destroy'])->name('destroy');
         });
-      // Gestion des Réceptions de Lait
+
+        // Gestion des Réceptions de Lait
         Route::prefix('receptions')->name('receptions.')->group(function () {
             Route::get('/', [ReceptionController::class, 'index'])->name('index');
             Route::get('/create', [ReceptionController::class, 'create'])->name('create');
             Route::post('/', [ReceptionController::class, 'store'])->name('store');
             Route::delete('/{reception}', [ReceptionController::class, 'destroy'])->name('destroy');
         });
-         // Gestion du Stock
+
+        // Gestion du Stock
         Route::prefix('stock')->name('stock.')->group(function () {
             Route::get('/', [StockController::class, 'index'])->name('index');
             Route::get('/{date}', [StockController::class, 'show'])->name('show');
@@ -94,10 +92,15 @@ Route::middleware('auth')->group(function () {
             Route::delete('/{livraison}', [LivraisonUsineController::class, 'destroy'])->name('destroy');
         });
 
-        // Gestion des Paiements de l'Usine
+        // Gestion des Paiements de l'Usine - MODIFIÉ AVEC NOUVELLE ROUTE
         Route::prefix('paiements')->name('paiements.')->group(function () {
             Route::get('/', [PaiementController::class, 'index'])->name('index');
             Route::post('/calculer-periode', [PaiementController::class, 'calculerPeriode'])->name('calculer-periode');
+            
+            // NOUVELLE ROUTE: Valider toute une période de 15 jours
+            Route::post('/valider-periode', [PaiementController::class, 'validerPeriode'])->name('valider-periode');
+            
+            // Route existante pour marquer un paiement individuel comme payé
             Route::put('/{paiement}/marquer-paye', [PaiementController::class, 'marquerPaye'])->name('marquer-paye');
         });
 
