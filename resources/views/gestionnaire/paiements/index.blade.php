@@ -8,7 +8,7 @@
         <a href="{{ route('gestionnaire.livraisons.index') }}" class="btn btn-outline-secondary">
             <i class="fas fa-truck me-2"></i>Voir Livraisons
         </a>
-        @if($pendingPeriods->count() > 0)
+          @if(count($pendingPeriods) > 0)
             <button class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#calculerPaiementsModal">
                 <i class="fas fa-calculator me-2"></i>Calculer Paiements
             </button>
@@ -89,13 +89,13 @@
 </div>
 
 <!-- Pending Periods Alert -->
-@if($pendingPeriods->count() > 0)
+@if(count($pendingPeriods)> 0)
 <div class="alert alert-warning">
     <div class="d-flex align-items-center">
         <i class="fas fa-exclamation-triangle me-3" style="font-size: 1.5rem;"></i>
         <div class="flex-grow-1">
             <h6 class="alert-heading mb-1">Périodes en attente de calcul</h6>
-            <p class="mb-2">{{ $pendingPeriods->count() }} période(s) ont des livraisons validées non payées.</p>
+            <p class="mb-2">{{ count($pendingPeriods) }} période(s) ont des livraisons validées non payées.</p>
             <button class="btn btn-warning btn-sm" data-bs-toggle="modal" data-bs-target="#calculerPaiementsModal">
                 <i class="fas fa-calculator me-1"></i>Calculer maintenant
             </button>
@@ -303,7 +303,7 @@
                 <i class="fas fa-money-bill text-muted" style="font-size: 4rem;"></i>
                 <h5 class="text-muted mt-3">Aucun paiement trouvé</h5>
                 <p class="text-muted">Aucun paiement ne correspond aux critères de recherche.</p>
-                @if($pendingPeriods->count() > 0)
+                @if(count($pendingPeriods)> 0)
                     <button class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#calculerPaiementsModal">
                         <i class="fas fa-calculator me-2"></i>Calculer les premiers paiements
                     </button>
@@ -314,7 +314,7 @@
 </div>
 
 <!-- Calculate Payments Modal -->
-@if($pendingPeriods->count() > 0)
+@if(count($pendingPeriods) > 0)
 <div class="modal fade" id="calculerPaiementsModal" tabindex="-1">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">

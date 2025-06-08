@@ -114,6 +114,9 @@ class LivraisonUsineController extends Controller
     /**
      * Show the form for creating a new livraison.
      */
+    /**
+     * Show the form for creating a new livraison.
+     */
     public function create(Request $request)
     {
         $cooperativeId = $this->getCurrentCooperativeId();
@@ -128,37 +131,36 @@ class LivraisonUsineController extends Controller
             $date = today();
         }
 
-        // Get or create stock for this date
-        $stock = StockLait::firstOrCreate([
-            'id_cooperative' => $cooperativeId,
-            'date_stock' => $date
-        ], [
-            'quantite_totale' => 0,
-            'quantite_disponible' => 0,
-            'quantite_livree' => 0
-        ]);
+        try {
+            // Utiliser la méthode sécurisée pour obtenir le stock
+            $stock = StockLait::getOrCreateDailyStock($cooperativeId, $date);
 
-        // Update stock if needed
-        if ($stock->quantite_totale == 0) {
-            StockLait::updateDailyStock($cooperativeId, $date);
-            $stock->refresh();
-        }
+            // Check if there's available stock
+            if ($stock->quantite_disponible <= 0) {
+                return redirect()
+                    ->route('gestionnaire.stock.show', $date->format('Y-m-d'))
+                    ->with('error', 'Aucun stock disponible pour cette date.');
+            }
 
-        // Check if there's available stock
-        if ($stock->quantite_disponible <= 0) {
+            // Get existing livraisons for this date
+            $existingLivraisons = LivraisonUsine::where('id_cooperative', $cooperativeId)
+                ->whereDate('date_livraison', $date)
+                ->get();
+
+            return view('gestionnaire.livraisons.create', compact('stock', 'existingLivraisons', 'cooperative'));
+
+        } catch (\Exception $e) {
+            \Log::error("Erreur lors de la création de livraison: " . $e->getMessage());
+            
             return redirect()
-                ->route('gestionnaire.stock.show', $date->format('Y-m-d'))
-                ->with('error', 'Aucun stock disponible pour cette date.');
+                ->route('gestionnaire.stock.index')
+                ->with('error', 'Erreur lors de la récupération du stock.');
         }
-
-        // Get existing livraisons for this date
-        $existingLivraisons = LivraisonUsine::where('id_cooperative', $cooperativeId)
-            ->whereDate('date_livraison', $date)
-            ->get();
-
-        return view('gestionnaire.livraisons.create', compact('stock', 'existingLivraisons', 'cooperative'));
     }
 
+    /**
+     * Store a newly created livraison and update stock.
+     */
     /**
      * Store a newly created livraison and update stock.
      */
@@ -200,16 +202,11 @@ class LivraisonUsineController extends Controller
         try {
             DB::beginTransaction();
 
-            // Get stock for this date
-            $stock = StockLait::where('id_cooperative', $cooperativeId)
-                ->whereDate('date_stock', $validated['date_livraison'])
-                ->first();
+            // Normaliser la date
+            $dateNormalisee = Carbon::parse($validated['date_livraison'])->format('Y-m-d');
 
-            if (!$stock) {
-                return back()
-                    ->withInput()
-                    ->with('error', 'Aucun stock trouvé pour cette date.');
-            }
+            // Get stock for this date using the secure method
+            $stock = StockLait::getOrCreateDailyStock($cooperativeId, $dateNormalisee);
 
             // Check if enough stock is available
             if ($validated['quantite_litres'] > $stock->quantite_disponible) {
@@ -224,7 +221,7 @@ class LivraisonUsineController extends Controller
             // Create the livraison
             $livraison = LivraisonUsine::create([
                 'id_cooperative' => $cooperativeId,
-                'date_livraison' => $validated['date_livraison'],
+                'date_livraison' => $dateNormalisee,
                 'quantite_litres' => $validated['quantite_litres'],
                 'prix_unitaire' => $validated['prix_unitaire'],
                 'statut' => 'planifiee',
@@ -246,6 +243,7 @@ class LivraisonUsineController extends Controller
                 
         } catch (\Exception $e) {
             DB::rollBack();
+            \Log::error("Erreur lors de la création de livraison: " . $e->getMessage());
             
             return back()
                 ->withInput()
@@ -282,6 +280,8 @@ class LivraisonUsineController extends Controller
 
     /**
      * Remove the specified livraison and restore stock.
+     *//**
+     * Remove the specified livraison and restore stock.
      */
     public function destroy(LivraisonUsine $livraison)
     {
@@ -299,18 +299,22 @@ class LivraisonUsineController extends Controller
 
             $quantite = $livraison->quantite_litres;
             $montant = $livraison->montant_total;
+            $dateNormalisee = $livraison->date_livraison->format('Y-m-d');
             
             // Get stock for this date
             $stock = StockLait::where('id_cooperative', $livraison->id_cooperative)
-                ->whereDate('date_stock', $livraison->date_livraison)
+                ->whereDate('date_stock', $dateNormalisee)
                 ->first();
 
-            // Delete the livraison
+            // Delete the livraison first
             $livraison->delete();
 
             // Restore stock if it exists
             if ($stock) {
                 $stock->annulerLivraison($quantite);
+            } else {
+                // If stock doesn't exist, recreate it
+                StockLait::updateDailyStock($livraison->id_cooperative, $dateNormalisee);
             }
 
             DB::commit();
@@ -325,13 +329,13 @@ class LivraisonUsineController extends Controller
                 
         } catch (\Exception $e) {
             DB::rollBack();
+            \Log::error("Erreur lors de la suppression de livraison: " . $e->getMessage());
             
             return redirect()
                 ->back()
                 ->with('error', 'Erreur lors de la suppression: ' . $e->getMessage());
         }
     }
-
     /**
      * Calculate statistics for the livraisons listing.
      */

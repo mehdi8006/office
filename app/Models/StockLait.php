@@ -5,6 +5,8 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class StockLait extends Model
 {
@@ -158,29 +160,110 @@ class StockLait extends Model
 
     /**
      * Create or update stock for a specific cooperative and date.
+     * MÉTHODE CORRIGÉE pour éviter les doublons
      */
     public static function updateDailyStock($cooperativeId, $date = null)
     {
+        // Normaliser la date au format Y-m-d
         $date = $date ?? today();
-        
-        // Calculate total quantity from receptions for this date
-        $totalQuantite = ReceptionLait::where('id_cooperative', $cooperativeId)
-                                    ->whereDate('date_reception', $date)
-                                    ->sum('quantite_litres');
+        if ($date instanceof Carbon) {
+            $dateString = $date->format('Y-m-d');
+        } else {
+            $dateString = Carbon::parse($date)->format('Y-m-d');
+        }
 
-        // Find or create stock record
-        $stock = self::firstOrNew([
-            'id_cooperative' => $cooperativeId,
-            'date_stock' => $date
-        ]);
+        try {
+            return DB::transaction(function () use ($cooperativeId, $dateString) {
+                // Calculer la quantité totale depuis les réceptions
+                $totalQuantite = ReceptionLait::where('id_cooperative', $cooperativeId)
+                                            ->whereDate('date_reception', $dateString)
+                                            ->sum('quantite_litres') ?? 0;
 
-        // Update quantities
-        $quantiteLivree = $stock->quantite_livree ?? 0;
-        $stock->quantite_totale = $totalQuantite;
-        $stock->quantite_disponible = $totalQuantite - $quantiteLivree;
-        
-        $stock->save();
-        
+                // Utiliser updateOrCreate pour éviter les doublons
+                $stock = self::updateOrCreate(
+                    [
+                        'id_cooperative' => $cooperativeId,
+                        'date_stock' => $dateString
+                    ],
+                    [
+                        'quantite_totale' => $totalQuantite,
+                        'quantite_disponible' => $totalQuantite, // Sera recalculée ci-dessous
+                        'quantite_livree' => 0 // Sera recalculée ci-dessous
+                    ]
+                );
+
+                // Recalculer les quantités livrées depuis les livraisons existantes
+                $quantiteLivreeTotal = \App\Models\LivraisonUsine::where('id_cooperative', $cooperativeId)
+                                                                ->whereDate('date_livraison', $dateString)
+                                                                ->sum('quantite_litres') ?? 0;
+
+                // Mettre à jour avec les bonnes quantités
+                $stock->update([
+                    'quantite_totale' => $totalQuantite,
+                    'quantite_livree' => $quantiteLivreeTotal,
+                    'quantite_disponible' => max(0, $totalQuantite - $quantiteLivreeTotal)
+                ]);
+
+                return $stock;
+            }, 3); // 3 tentatives en cas de deadlock
+
+        } catch (\Illuminate\Database\QueryException $e) {
+            // Si c'est une erreur de contrainte d'intégrité, récupérer l'enregistrement existant
+            if ($e->getCode() == 23000 || str_contains($e->getMessage(), 'unique_cooperative_date_stock')) {
+                Log::warning("Stock déjà existant pour cooperative {$cooperativeId} le {$dateString}, récupération...");
+                
+                $stock = self::where('id_cooperative', $cooperativeId)
+                            ->whereDate('date_stock', $dateString)
+                            ->first();
+                
+                if ($stock) {
+                    // Recalculer les quantités pour mettre à jour
+                    $totalQuantite = ReceptionLait::where('id_cooperative', $cooperativeId)
+                                                  ->whereDate('date_reception', $dateString)
+                                                  ->sum('quantite_litres') ?? 0;
+                    
+                    $quantiteLivreeTotal = \App\Models\LivraisonUsine::where('id_cooperative', $cooperativeId)
+                                                                    ->whereDate('date_livraison', $dateString)
+                                                                    ->sum('quantite_litres') ?? 0;
+                    
+                    $stock->update([
+                        'quantite_totale' => $totalQuantite,
+                        'quantite_livree' => $quantiteLivreeTotal,
+                        'quantite_disponible' => max(0, $totalQuantite - $quantiteLivreeTotal)
+                    ]);
+                    
+                    return $stock;
+                }
+            }
+            
+            // Re-lancer l'exception si ce n'est pas une erreur de doublon
+            throw $e;
+        }
+    }
+
+    /**
+     * Méthode sécurisée pour obtenir ou créer un stock
+     */
+    public static function getOrCreateDailyStock($cooperativeId, $date = null)
+    {
+        // Normaliser la date
+        $date = $date ?? today();
+        if ($date instanceof Carbon) {
+            $dateString = $date->format('Y-m-d');
+        } else {
+            $dateString = Carbon::parse($date)->format('Y-m-d');
+        }
+
+        // Essayer de récupérer d'abord
+        $stock = self::where('id_cooperative', $cooperativeId)
+                    ->whereDate('date_stock', $dateString)
+                    ->first();
+
+        if (!$stock) {
+            // Si pas trouvé, créer via updateDailyStock
+            $stock = self::updateDailyStock($cooperativeId, $dateString);
+        }
+
         return $stock;
     }
 
@@ -193,10 +276,11 @@ class StockLait extends Model
             throw new \Exception("Quantité à livrer ({$quantite}L) supérieure au stock disponible ({$this->quantite_disponible}L)");
         }
 
-        $this->quantite_livree += $quantite;
-        $this->quantite_disponible -= $quantite;
-        
-        return $this->save();
+        return DB::transaction(function () use ($quantite) {
+            $this->increment('quantite_livree', $quantite);
+            $this->decrement('quantite_disponible', $quantite);
+            return true;
+        });
     }
 
     /**
@@ -208,10 +292,11 @@ class StockLait extends Model
             throw new \Exception("Quantité à annuler ({$quantite}L) supérieure à la quantité livrée ({$this->quantite_livree}L)");
         }
 
-        $this->quantite_livree -= $quantite;
-        $this->quantite_disponible += $quantite;
-        
-        return $this->save();
+        return DB::transaction(function () use ($quantite) {
+            $this->decrement('quantite_livree', $quantite);
+            $this->increment('quantite_disponible', $quantite);
+            return true;
+        });
     }
 
     /**
@@ -338,14 +423,14 @@ class StockLait extends Model
         static::creating(function ($stock) {
             // Ensure quantities are consistent
             if ($stock->quantite_disponible + $stock->quantite_livree != $stock->quantite_totale) {
-                $stock->quantite_disponible = $stock->quantite_totale - $stock->quantite_livree;
+                $stock->quantite_disponible = max(0, $stock->quantite_totale - $stock->quantite_livree);
             }
         });
 
         static::updating(function ($stock) {
             // Ensure quantities are consistent
             if ($stock->quantite_disponible + $stock->quantite_livree != $stock->quantite_totale) {
-                $stock->quantite_disponible = $stock->quantite_totale - $stock->quantite_livree;
+                $stock->quantite_disponible = max(0, $stock->quantite_totale - $stock->quantite_livree);
             }
         });
     }

@@ -9,6 +9,8 @@ use App\Models\ReceptionLait;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+
 use Carbon\Carbon;
 
 class StockController extends Controller
@@ -120,6 +122,9 @@ class StockController extends Controller
     /**
      * Display the specified stock with detailed information.
      */
+    /**
+     * Display the specified stock with detailed information.
+     */
     public function show(Request $request, $date)
     {
         $cooperativeId = $this->getCurrentCooperativeId();
@@ -134,36 +139,32 @@ class StockController extends Controller
                 ->with('error', 'Format de date invalide');
         }
 
-        // Get or create stock for this date
-        $stock = StockLait::firstOrCreate([
-            'id_cooperative' => $cooperativeId,
-            'date_stock' => $stockDate
-        ], [
-            'quantite_totale' => 0,
-            'quantite_disponible' => 0,
-            'quantite_livree' => 0
-        ]);
+        try {
+            // Utiliser la méthode sécurisée pour obtenir le stock
+            $stock = StockLait::getOrCreateDailyStock($cooperativeId, $stockDate);
 
-        // Update stock if needed
-        if ($stock->quantite_totale == 0) {
-            StockLait::updateDailyStock($cooperativeId, $stockDate);
-            $stock->refresh();
+            // Get receptions for this date
+            $receptions = ReceptionLait::where('id_cooperative', $cooperativeId)
+                ->whereDate('date_reception', $stockDate)
+                ->with('membre')
+                ->latest('created_at')
+                ->get();
+
+            // Get livraisons for this stock
+            $livraisons = LivraisonUsine::where('id_cooperative', $cooperativeId)
+                ->whereDate('date_livraison', $stockDate)
+                ->latest('created_at')
+                ->get();
+
+            return view('gestionnaire.stock.show', compact('stock', 'receptions', 'livraisons', 'cooperative'));
+
+        } catch (\Exception $e) {
+            \Log::error("Erreur lors de la récupération du stock: " . $e->getMessage());
+            
+            return redirect()
+                ->route('gestionnaire.stock.index')
+                ->with('error', 'Erreur lors de la récupération du stock pour cette date.');
         }
-
-        // Get receptions for this date
-        $receptions = ReceptionLait::where('id_cooperative', $cooperativeId)
-            ->whereDate('date_reception', $stockDate)
-            ->with('membre')
-            ->latest('created_at')
-            ->get();
-
-        // Get livraisons for this stock
-        $livraisons = LivraisonUsine::where('id_cooperative', $cooperativeId)
-            ->whereDate('date_livraison', $stockDate)
-            ->latest('created_at')
-            ->get();
-
-        return view('gestionnaire.stock.show', compact('stock', 'receptions', 'livraisons', 'cooperative'));
     }
 
     /**
