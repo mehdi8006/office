@@ -120,7 +120,9 @@
                             <i class="fas fa-seedling text-white me-2" style="font-size: 1.5rem;"></i>
                             <h4 class="text-white mb-0">SGCCL</h4>
                         </div>
+                        
                         <small class="text-white-50">Gestionnaire</small>
+                        
                     </div>
 
                     <!-- Navigation -->

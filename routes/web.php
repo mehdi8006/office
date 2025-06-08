@@ -49,7 +49,8 @@ Route::middleware('auth')->group(function () {
         })->name('dashboard');
 
         // Gestion des Membres Éleveurs
-        Route::prefix('membres')->name('membres.')->group(function () {
+       
+           Route::prefix('membres')->name('membres.')->group(function () {
             Route::get('/', [MembreEleveurController::class, 'index'])->name('index');
             Route::get('/create', [MembreEleveurController::class, 'create'])->name('create');
             Route::post('/', [MembreEleveurController::class, 'store'])->name('store');

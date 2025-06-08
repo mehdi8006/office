@@ -75,33 +75,21 @@
                     @method('PUT')
                     
                     <!-- Cooperative Selection -->
-                    <div class="row mb-3">
-                        <div class="col-md-12">
-                            <label for="id_cooperative" class="form-label">
-                                <i class="fas fa-building me-2 text-primary"></i>
-                                Coopérative <span class="text-danger">*</span>
-                            </label>
-                            <select class="form-select @error('id_cooperative') is-invalid @enderror" 
-                                    id="id_cooperative" 
-                                    name="id_cooperative" 
-                                    required>
-                                <option value="">-- Sélectionnez une coopérative --</option>
-                                @foreach($cooperatives as $cooperative)
-                                    <option value="{{ $cooperative->id_cooperative }}" 
-                                            {{ (old('id_cooperative', $membre->id_cooperative) == $cooperative->id_cooperative) ? 'selected' : '' }}>
-                                        {{ $cooperative->nom_cooperative }}
-                                    </option>
-                                @endforeach
-                            </select>
-                            @error('id_cooperative')
-                                <div class="invalid-feedback">
-                                    <i class="fas fa-exclamation-circle me-1"></i>
-                                    {{ $message }}
-                                </div>
-                            @enderror
-                        </div>
-                    </div>
-
+                    <!-- Cooperative Information (Read-only) -->
+<div class="row mb-3">
+    <div class="col-md-12">
+        <label class="form-label">
+            <i class="fas fa-building me-2 text-primary"></i>
+            Coopérative
+        </label>
+        <div class="form-control bg-light d-flex align-items-center">
+            <i class="fas fa-info-circle text-info me-2"></i>
+            <strong>{{ $cooperative->nom_cooperative }}</strong>
+            <span class="badge bg-primary ms-2">{{ $cooperative->matricule }}</span>
+        </div>
+        <small class="text-muted">La coopérative ne peut pas être modifiée.</small>
+    </div>
+</div>
                     <!-- Personal Information -->
                     <div class="row mb-3">
                         <div class="col-md-6">

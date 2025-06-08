@@ -142,6 +142,7 @@ class Utilisateur extends Authenticatable
 
         return $matricule;
     }
+    
 
     /**
      * Boot the model.
@@ -160,4 +161,61 @@ class Utilisateur extends Authenticatable
     {
         return $this->hasMany(Cooperative::class, 'responsable_id', 'id_utilisateur');
     }
+// Ajouter ces méthodes à la fin de la classe Utilisateur dans app/Models/Utilisateur.php
+
+/**
+ * Get the cooperative managed by this gestionnaire.
+ */
+public function cooperativeGeree()
+{
+    return $this->hasOne(Cooperative::class, 'responsable_id', 'id_utilisateur');
+}
+
+/**
+ * Check if user is a gestionnaire with assigned cooperative.
+ */
+public function isGestionnaireWithCooperative()
+{
+    return $this->role === 'gestionnaire' && $this->cooperativeGeree !== null;
+}
+
+/**
+ * Get the cooperative ID for this gestionnaire.
+ */
+public function getCooperativeId()
+{
+    if ($this->role !== 'gestionnaire') {
+        return null;
+    }
+    
+    $cooperative = $this->cooperativeGeree;
+    return $cooperative ? $cooperative->id_cooperative : null;
+}
+
+/**
+ * Check if gestionnaire can access a specific membre.
+ */
+public function canAccessMembre($membreOrCooperativeId)
+{
+    if ($this->role !== 'gestionnaire') {
+        return false;
+    }
+    
+    $cooperativeId = $this->getCooperativeId();
+    if (!$cooperativeId) {
+        return false;
+    }
+    
+    // Si c'est un ID de coopérative
+    if (is_numeric($membreOrCooperativeId)) {
+        return $cooperativeId == $membreOrCooperativeId;
+    }
+    
+    // Si c'est un objet membre
+    if (is_object($membreOrCooperativeId) && isset($membreOrCooperativeId->id_cooperative)) {
+        return $cooperativeId == $membreOrCooperativeId->id_cooperative;
+    }
+    
+    return false;
+}
 }

@@ -78,16 +78,23 @@
 </div>
 
 <!-- Filters Card -->
+<!-- Cooperative Info & Filters Card -->
 <div class="card mb-4">
     <div class="card-header">
-        <h5 class="card-title mb-0">
-            <i class="fas fa-filter me-2"></i>Filtres et Recherche
-        </h5>
+        <div class="d-flex justify-content-between align-items-center">
+            <h5 class="card-title mb-0">
+                <i class="fas fa-filter me-2"></i>Filtres et Recherche
+            </h5>
+            <div class="d-flex align-items-center">
+                <span class="text-muted me-2">Coopérative :</span>
+                <span class="badge bg-primary fs-6">{{ $cooperative->nom_cooperative }}</span>
+            </div>
+        </div>
     </div>
     <div class="card-body">
         <form method="GET" action="{{ route('gestionnaire.membres.index') }}" class="row g-3">
             <!-- Search -->
-            <div class="col-md-4">
+            <div class="col-md-6">
                 <label for="search" class="form-label">Recherche</label>
                 <div class="input-group">
                     <span class="input-group-text"><i class="fas fa-search"></i></span>
@@ -101,27 +108,13 @@
             </div>
 
             <!-- Status Filter -->
-            <div class="col-md-3">
+            <div class="col-md-4">
                 <label for="statut" class="form-label">Statut</label>
                 <select class="form-select" id="statut" name="statut">
                     <option value="tous" {{ request('statut') === 'tous' ? 'selected' : '' }}>Tous les statuts</option>
                     <option value="actif" {{ request('statut') === 'actif' ? 'selected' : '' }}>Actif</option>
                     <option value="inactif" {{ request('statut') === 'inactif' ? 'selected' : '' }}>Inactif</option>
                     <option value="suppression" {{ request('statut') === 'suppression' ? 'selected' : '' }}>Supprimé</option>
-                </select>
-            </div>
-
-            <!-- Cooperative Filter -->
-            <div class="col-md-3">
-                <label for="cooperative_id" class="form-label">Coopérative</label>
-                <select class="form-select" id="cooperative_id" name="cooperative_id">
-                    <option value="">Toutes les coopératives</option>
-                    @foreach($cooperatives as $cooperative)
-                        <option value="{{ $cooperative->id_cooperative }}" 
-                                {{ request('cooperative_id') == $cooperative->id_cooperative ? 'selected' : '' }}>
-                            {{ $cooperative->nom_cooperative }}
-                        </option>
-                    @endforeach
                 </select>
             </div>
 
@@ -180,11 +173,10 @@
                     <thead class="table-light">
                         <tr>
                             <th>Membre</th>
-                            <th>Coopérative</th>
                             <th>Contact</th>
                             <th>Statut</th>
                             <th>Date d'inscription</th>
-                            <th width="200">Actions</th>
+                            <th width="215">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -197,9 +189,7 @@
                                         <small class="text-muted">CIN: {{ $membre->numero_carte_nationale }}</small>
                                     </div>
                                 </td>
-                                <td>
-                                    <span class="badge bg-info">{{ $membre->cooperative->nom_cooperative }}</span>
-                                </td>
+                                
                                 <td>
                                     <div>
                                         <i class="fas fa-phone me-1"></i>{{ $membre->telephone }}
