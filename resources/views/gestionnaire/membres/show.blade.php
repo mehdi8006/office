@@ -243,7 +243,7 @@
                                             <code>{{ $reception->matricule_reception }}</code>
                                         </td>
                                         <td>
-                                            <span class="badge bg-success fs-6">
+                                            <span class="text-muted">
                                                 {{ number_format($reception->quantite_litres, 2) }} L
                                             </span>
                                         </td>

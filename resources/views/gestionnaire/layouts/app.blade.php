@@ -142,6 +142,13 @@
                                 Membres Éleveurs
                             </a>
                         </li>
+                        <li class="nav-item">
+                        <a class="nav-link {{ request()->routeIs('gestionnaire.receptions.*') ? 'active' : '' }}" 
+                        href="{{ route('gestionnaire.receptions.index') }}">
+                        <i class="fas fa-tint me-2"></i>
+                        Réceptions de Lait
+                        </a>
+                        </li>
 
                         <hr class="text-white-50">
                         

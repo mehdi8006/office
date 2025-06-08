@@ -2,6 +2,8 @@
 
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\Gestionnaire\MembreEleveurController;
+use App\Http\Controllers\Gestionnaire\ReceptionController;
+
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -64,6 +66,14 @@ Route::middleware('auth')->group(function () {
             Route::patch('/{membre}/restore', [MembreEleveurController::class, 'restore'])->name('restore');
             Route::delete('/{membre}', [MembreEleveurController::class, 'destroy'])->name('destroy');
         });
+      // Gestion des Réceptions de Lait
+        Route::prefix('receptions')->name('receptions.')->group(function () {
+            Route::get('/', [ReceptionController::class, 'index'])->name('index');
+            Route::get('/create', [ReceptionController::class, 'create'])->name('create');
+            Route::post('/', [ReceptionController::class, 'store'])->name('store');
+            Route::delete('/{reception}', [ReceptionController::class, 'destroy'])->name('destroy');
+        });
+
 
     });
 
