@@ -2,9 +2,9 @@
 
 namespace Database\Factories;
 
+use App\Models\ReceptionLait;
 use App\Models\Cooperative;
 use App\Models\MembreEleveur;
-use App\Models\ReceptionLait;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Carbon\Carbon;
 
@@ -20,158 +20,261 @@ class ReceptionLaitFactory extends Factory
      */
     public function definition(): array
     {
-        // Date de réception (entre 6 mois et aujourd'hui)
+        $membre = MembreEleveur::factory()->actif();
         $dateReception = $this->faker->dateTimeBetween('-6 months', 'now');
         
-        // Quantité variable selon la saison et le profil de l'éleveur
-        $quantite = $this->generateQuantiteRealistic($dateReception);
-
         return [
-            'id_cooperative' => Cooperative::factory(),
-            'id_membre' => MembreEleveur::factory(),
-            'matricule_reception' => $this->generateMatriculeReception(),
-            'date_reception' => $dateReception->format('Y-m-d'),
-            'quantite_litres' => $quantite,
-            'created_at' => $dateReception,
-            'updated_at' => $dateReception,
+            'id_cooperative' => function (array $attributes) {
+                // Si id_membre est fourni, utiliser sa coopérative
+                if (isset($attributes['id_membre'])) {
+                    $membre = MembreEleveur::find($attributes['id_membre']);
+                    return $membre ? $membre->id_cooperative : Cooperative::factory();
+                }
+                return Cooperative::factory();
+            },
+            'id_membre' => $membre,
+            'matricule_reception' => '', // Sera généré automatiquement par le modèle
+            'date_reception' => $dateReception,
+            'quantite_litres' => $this->generateQuantiteRealiste($dateReception),
         ];
     }
 
     /**
-     * Générer une quantité réaliste selon la saison et les conditions
+     * Générer une quantité réaliste selon la saison et le type d'éleveur
      */
-    private function generateQuantiteRealistic(\DateTime $date): float
+    private function generateQuantiteRealiste($date): float
     {
-        $mois = (int) $date->format('n');
+        $mois = Carbon::parse($date)->month;
         
-        // Variation saisonnière de la production laitière au Maroc
-        $facteurSaisonnier = match (true) {
-            // Printemps (mars-mai) : Haute production
-            in_array($mois, [3, 4, 5]) => $this->faker->randomFloat(2, 1.2, 1.5),
-            
-            // Été (juin-août) : Production modérée à faible
-            in_array($mois, [6, 7, 8]) => $this->faker->randomFloat(2, 0.7, 1.0),
-            
-            // Automne (septembre-novembre) : Production moyenne à bonne
-            in_array($mois, [9, 10, 11]) => $this->faker->randomFloat(2, 1.0, 1.3),
-            
-            // Hiver (décembre-février) : Production moyenne
-            default => $this->faker->randomFloat(2, 0.9, 1.2)
+        // Facteur saisonnier (plus de lait au printemps)
+        $facteurSaisonnier = match(true) {
+            in_array($mois, [3, 4, 5]) => 1.3,     // Printemps: pic de lactation
+            in_array($mois, [6, 7, 8]) => 0.9,     // Été: chaleur réduit la production
+            in_array($mois, [9, 10, 11]) => 1.1,   // Automne: bonne période
+            default => 0.8                          // Hiver: production minimale
         };
 
-        // Quantité de base selon le profil de l'éleveur
-        $profilEleveur = $this->faker->randomElement([
-            'petit' => 40,      // 20% - Petits éleveurs (5-15L/jour)
-            'moyen' => 50,      // 50% - Éleveurs moyens (15-40L/jour) 
-            'grand' => 10       // 30% - Grands éleveurs (40-120L/jour)
+        // Type d'éleveur (petit, moyen, grand)
+        $typeEleveur = $this->faker->randomElement(['petit', 'moyen', 'grand']);
+        
+        $quantiteBase = match($typeEleveur) {
+            'petit' => $this->faker->randomFloat(2, 5, 25),      // 5-25 litres
+            'moyen' => $this->faker->randomFloat(2, 20, 60),     // 20-60 litres
+            'grand' => $this->faker->randomFloat(2, 50, 150),    // 50-150 litres
+        };
+
+        // Variation quotidienne aléatoire (±20%)
+        $variationQuotidienne = $this->faker->randomFloat(2, 0.8, 1.2);
+        
+        $quantiteFinale = $quantiteBase * $facteurSaisonnier * $variationQuotidienne;
+        
+        return round($quantiteFinale, 2);
+    }
+
+    /**
+     * État pour réception d'un petit éleveur
+     */
+    public function petitEleveur(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'quantite_litres' => $this->faker->randomFloat(2, 5, 25),
         ]);
-
-        $quantiteBase = match ($profilEleveur) {
-            'petit' => $this->faker->randomFloat(2, 5, 15),
-            'moyen' => $this->faker->randomFloat(2, 15, 40),
-            'grand' => $this->faker->randomFloat(2, 40, 120),
-        };
-
-        // Variation quotidienne aléatoire (±15%)
-        $variationQuotidienne = $this->faker->randomFloat(2, 0.85, 1.15);
-
-        // Calcul final
-        $quantiteFinal = $quantiteBase * $facteurSaisonnier * $variationQuotidienne;
-
-        // Arrondir à 2 décimales et s'assurer d'un minimum de 2L
-        return max(2.00, round($quantiteFinal, 2));
     }
 
     /**
-     * Générer un matricule de réception unique
+     * État pour réception d'un moyen éleveur
      */
-    private function generateMatriculeReception(): string
+    public function moyenEleveur(): static
     {
-        // Format: REC + Année + Mois + Jour + Numéro séquentiel (5 chiffres)
-        $date = now();
-        $prefix = 'REC' . $date->format('ymd');
-        
-        // Générer un numéro séquentiel unique
-        $sequence = str_pad($this->faker->unique()->numberBetween(1, 99999), 5, '0', STR_PAD_LEFT);
-        
-        return $prefix . $sequence;
+        return $this->state(fn (array $attributes) => [
+            'quantite_litres' => $this->faker->randomFloat(2, 20, 60),
+        ]);
     }
 
     /**
-     * État pour une réception de printemps (haute production)
+     * État pour réception d'un grand éleveur
      */
-    public function printemps(): static
+    public function grandEleveur(): static
     {
-        return $this->state(function (array $attributes) {
-            $datePrintemps = $this->faker->dateTimeBetween('2024-03-01', '2024-05-31');
+        return $this->state(fn (array $attributes) => [
+            'quantite_litres' => $this->faker->randomFloat(2, 50, 150),
+        ]);
+    }
+
+    /**
+     * État pour une réception à une date spécifique
+     */
+    public function onDate($date): static
+    {
+        return $this->state(function (array $attributes) use ($date) {
             return [
-                'date_reception' => $datePrintemps->format('Y-m-d'),
-                'quantite_litres' => $this->faker->randomFloat(2, 25, 80), // Production élevée
-                'created_at' => $datePrintemps,
-                'updated_at' => $datePrintemps,
+                'date_reception' => $date,
+                'quantite_litres' => $this->generateQuantiteRealiste($date),
             ];
         });
     }
 
     /**
-     * État pour une réception d'été (production faible)
-     */
-    public function ete(): static
-    {
-        return $this->state(function (array $attributes) {
-            $dateEte = $this->faker->dateTimeBetween('2024-06-01', '2024-08-31');
-            return [
-                'date_reception' => $dateEte->format('Y-m-d'),
-                'quantite_litres' => $this->faker->randomFloat(2, 8, 35), // Production réduite
-                'created_at' => $dateEte,
-                'updated_at' => $dateEte,
-            ];
-        });
-    }
-
-    /**
-     * État pour une réception récente
+     * État pour réception récente (dernière semaine)
      */
     public function recent(): static
     {
         return $this->state(function (array $attributes) {
-            $dateRecente = $this->faker->dateTimeBetween('-2 weeks', 'now');
+            $date = $this->faker->dateTimeBetween('-1 week', 'now');
             return [
-                'date_reception' => $dateRecente->format('Y-m-d'),
-                'created_at' => $dateRecente,
-                'updated_at' => $dateRecente,
+                'date_reception' => $date,
+                'quantite_litres' => $this->generateQuantiteRealiste($date),
             ];
         });
     }
 
     /**
-     * État pour une grande quantité
+     * État pour réception aujourd'hui
      */
-    public function grandeQuantite(): static
+    public function today(): static
+    {
+        return $this->state(function (array $attributes) {
+            $date = today();
+            return [
+                'date_reception' => $date,
+                'quantite_litres' => $this->generateQuantiteRealiste($date),
+            ];
+        });
+    }
+
+    /**
+     * État pour réception cette semaine
+     */
+    public function thisWeek(): static
+    {
+        return $this->state(function (array $attributes) {
+            $date = $this->faker->dateTimeBetween('monday this week', 'now');
+            return [
+                'date_reception' => $date,
+                'quantite_litres' => $this->generateQuantiteRealiste($date),
+            ];
+        });
+    }
+
+    /**
+     * État pour réception ce mois
+     */
+    public function thisMonth(): static
+    {
+        return $this->state(function (array $attributes) {
+            $date = $this->faker->dateTimeBetween('first day of this month', 'now');
+            return [
+                'date_reception' => $date,
+                'quantite_litres' => $this->generateQuantiteRealiste($date),
+            ];
+        });
+    }
+
+    /**
+     * État pour réception en période de pic (printemps)
+     */
+    public function picProduction(): static
+    {
+        return $this->state(function (array $attributes) {
+            // Mars, Avril, Mai de l'année en cours ou précédente
+            $annee = $this->faker->randomElement([date('Y'), date('Y') - 1]);
+            $mois = $this->faker->randomElement([3, 4, 5]);
+            $jour = $this->faker->numberBetween(1, 28);
+            
+            $date = Carbon::create($annee, $mois, $jour);
+            
+            return [
+                'date_reception' => $date,
+                'quantite_litres' => $this->generateQuantiteRealiste($date),
+            ];
+        });
+    }
+
+    /**
+     * État pour réception en période faible (hiver)
+     */
+    public function faibleProduction(): static
+    {
+        return $this->state(function (array $attributes) {
+            // Décembre, Janvier, Février
+            $annee = $this->faker->randomElement([date('Y'), date('Y') - 1]);
+            $mois = $this->faker->randomElement([12, 1, 2]);
+            $jour = $this->faker->numberBetween(1, 28);
+            
+            $date = Carbon::create($annee, $mois, $jour);
+            
+            return [
+                'date_reception' => $date,
+                'quantite_litres' => $this->generateQuantiteRealiste($date),
+            ];
+        });
+    }
+
+    /**
+     * État pour réception avec membre spécifique
+     */
+    public function forMembre(MembreEleveur $membre): static
     {
         return $this->state(fn (array $attributes) => [
-            'quantite_litres' => $this->faker->randomFloat(2, 60, 150),
+            'id_membre' => $membre->id_membre,
+            'id_cooperative' => $membre->id_cooperative,
         ]);
     }
 
     /**
-     * État pour une petite quantité
+     * État pour réception avec coopérative spécifique
      */
-    public function petiteQuantite(): static
+    public function forCooperative(Cooperative $cooperative): static
+    {
+        return $this->state(function (array $attributes) use ($cooperative) {
+            // Sélectionner un membre aléatoire de cette coopérative
+            $membre = $cooperative->membresActifs()->inRandomOrder()->first();
+            
+            if (!$membre) {
+                // Si pas de membre actif, en créer un
+                $membre = MembreEleveur::factory()->actif()->forCooperative($cooperative)->create();
+            }
+
+            return [
+                'id_cooperative' => $cooperative->id_cooperative,
+                'id_membre' => $membre->id_membre,
+            ];
+        });
+    }
+
+    /**
+     * État pour réception avec quantité spécifique
+     */
+    public function withQuantite(float $quantite): static
     {
         return $this->state(fn (array $attributes) => [
-            'quantite_litres' => $this->faker->randomFloat(2, 3, 20),
+            'quantite_litres' => $quantite,
         ]);
     }
 
     /**
-     * Configurer avec des IDs spécifiques
+     * Créer des réceptions quotidiennes pour un membre sur une période
      */
-    public function pourMembre(int $idMembre, int $idCooperative): static
+    public function dailyForPeriod(MembreEleveur $membre, $startDate, $endDate): array
     {
-        return $this->state(fn (array $attributes) => [
-            'id_membre' => $idMembre,
-            'id_cooperative' => $idCooperative,
-        ]);
+        $receptions = [];
+        $current = Carbon::parse($startDate);
+        $end = Carbon::parse($endDate);
+
+        while ($current <= $end) {
+            // Pas de réception le dimanche (jour de repos)
+            if ($current->dayOfWeek !== Carbon::SUNDAY) {
+                // Probabilité de 85% d'avoir une réception un jour donné
+                if ($this->faker->boolean(85)) {
+                    $receptions[] = $this->forMembre($membre)
+                                        ->onDate($current->toDateString())
+                                        ->make()
+                                        ->toArray();
+                }
+            }
+            $current->addDay();
+        }
+
+        return $receptions;
     }
 }

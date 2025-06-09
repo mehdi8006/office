@@ -30,7 +30,6 @@ class PaiementCooperativeUsine extends Model
      */
     protected $fillable = [
         'id_cooperative',
-        'id_livraison',
         'date_paiement',
         'montant',
         'statut',
@@ -60,27 +59,11 @@ class PaiementCooperativeUsine extends Model
     }
 
     /**
-     * Get the livraison that this paiement belongs to.
-     */
-    public function livraison()
-    {
-        return $this->belongsTo(LivraisonUsine::class, 'id_livraison', 'id_livraison');
-    }
-
-    /**
      * Scope a query to filter by cooperative.
      */
     public function scopeByCooperative($query, $cooperativeId)
     {
         return $query->where('id_cooperative', $cooperativeId);
-    }
-
-    /**
-     * Scope a query to filter by livraison.
-     */
-    public function scopeByLivraison($query, $livraisonId)
-    {
-        return $query->where('id_livraison', $livraisonId);
     }
 
     /**
@@ -155,11 +138,6 @@ class PaiementCooperativeUsine extends Model
         $this->statut = 'paye';
         $this->date_paiement = now()->toDateString();
         
-        // Also update the corresponding livraison status
-        if ($this->livraison) {
-            $this->livraison->marquerPayee();
-        }
-        
         return $this->save();
     }
 
@@ -216,11 +194,7 @@ class PaiementCooperativeUsine extends Model
     {
         parent::boot();
 
-        static::creating(function ($paiement) {
-            // Set payment amount from livraison if not provided
-            if (empty($paiement->montant) && $paiement->livraison) {
-                $paiement->montant = $paiement->livraison->montant_total;
-            }
-        });
+        // Removed the creating callback that set payment amount from livraison
+        // since we no longer have the livraison relationship
     }
 }

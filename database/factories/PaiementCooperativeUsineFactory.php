@@ -2,9 +2,9 @@
 
 namespace Database\Factories;
 
+use App\Models\PaiementCooperativeUsine;
 use App\Models\Cooperative;
 use App\Models\LivraisonUsine;
-use App\Models\PaiementCooperativeUsine;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Carbon\Carbon;
 
@@ -20,263 +20,258 @@ class PaiementCooperativeUsineFactory extends Factory
      */
     public function definition(): array
     {
-        $datePaiement = $this->faker->dateTimeBetween('-3 months', 'now');
-
         return [
             'id_cooperative' => Cooperative::factory(),
             'id_livraison' => LivraisonUsine::factory(),
-            'date_paiement' => $datePaiement->format('Y-m-d'),
-            'montant' => $this->faker->randomFloat(2, 1000, 15000), // Montant réaliste
-            'statut' => $this->faker->randomElement([
-                'en_attente' => 30,  // 30% en attente
-                'paye' => 70         // 70% payé
-            ]),
-            'created_at' => $datePaiement,
-            'updated_at' => function (array $attributes) use ($datePaiement) {
-                // Mise à jour peut être après la création si statut change
-                if ($attributes['statut'] === 'paye') {
-                    return $this->faker->dateTimeBetween($datePaiement, 'now');
-                }
-                return $datePaiement;
-            },
+            'date_paiement' => $this->faker->dateTimeBetween('-3 months', 'now'),
+            'montant' => $this->faker->randomFloat(2, 500, 15000), // Sera généralement écrasé par la livraison
+            'statut' => $this->faker->randomElement(['en_attente', 'paye']),
         ];
     }
 
     /**
-     * Basé sur une livraison existante
+     * État pour paiement en attente
      */
-    public function baseSurLivraison(LivraisonUsine $livraison): static
+    public function enAttente(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'statut' => 'en_attente',
+            'date_paiement' => $this->faker->dateTimeBetween('now', '+1 month'), // Date future pour paiement prévu
+        ]);
+    }
+
+    /**
+     * État pour paiement effectué
+     */
+    public function paye(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'statut' => 'paye',
+            'date_paiement' => $this->faker->dateTimeBetween('-2 months', 'now'),
+        ]);
+    }
+
+    /**
+     * État pour paiement basé sur une livraison spécifique
+     */
+    public function forLivraison(LivraisonUsine $livraison): static
     {
         return $this->state(function (array $attributes) use ($livraison) {
             // Date de paiement basée sur la date de livraison
             $dateLivraison = Carbon::parse($livraison->date_livraison);
-            $delaiPaiement = $this->calculerDelaiPaiement($livraison);
-            $datePaiement = $dateLivraison->copy()->addDays($delaiPaiement);
+            $datePaiement = $dateLivraison->copy()->addDays($this->faker->numberBetween(7, 45)); // Paiement entre 1 semaine et 1.5 mois après
 
-            // Statut selon l'ancienneté
-            $statut = $this->determinerStatutSelonDate($datePaiement);
-
-            // Montant peut être légèrement différent (frais, bonus, etc.)
-            $montant = $this->ajusterMontant($livraison->montant_total);
+            // Statut basé sur la date
+            $statut = $datePaiement->isPast() ? 'paye' : 'en_attente';
 
             return [
                 'id_cooperative' => $livraison->id_cooperative,
                 'id_livraison' => $livraison->id_livraison,
-                'date_paiement' => $datePaiement->format('Y-m-d'),
-                'montant' => $montant,
+                'montant' => $livraison->montant_total,
+                'date_paiement' => $datePaiement,
                 'statut' => $statut,
-                'created_at' => $dateLivraison->copy()->addDays(rand(1, 5)), // Création quelques jours après livraison
-                'updated_at' => $statut === 'paye' ? $datePaiement : $dateLivraison->copy()->addDays(rand(1, 5)),
             ];
         });
     }
 
     /**
-     * Calculer le délai de paiement réaliste
+     * État pour paiement avec coopérative spécifique
      */
-    private function calculerDelaiPaiement(LivraisonUsine $livraison): int
+    public function forCooperative(Cooperative $cooperative): static
     {
-        // Délai selon la taille de la coopérative et historique
-        $cooperative = $livraison->cooperative;
-        $nombreMembres = $cooperative->membres()->where('statut', 'actif')->count();
-
-        return match (true) {
-            // Grandes coopératives : délais plus courts (partenariat privilégié)
-            $nombreMembres >= 60 => rand(10, 25),
-            
-            // Moyennes coopératives : délais standards
-            $nombreMembres >= 25 => rand(20, 35),
-            
-            // Petites coopératives : délais plus longs
-            default => rand(30, 50)
-        };
+        return $this->state(fn (array $attributes) => [
+            'id_cooperative' => $cooperative->id_cooperative,
+        ]);
     }
 
     /**
-     * Déterminer le statut selon la date
+     * État pour paiement récent
      */
-    private function determinerStatutSelonDate(Carbon $datePaiement): string
+    public function recent(): static
     {
-        $joursDepuis = $datePaiement->diffInDays(now());
-        
-        return match (true) {
-            // Si la date de paiement est dans le futur ou très récente
-            $joursDepuis <= 7 => 'en_attente',
-            
-            // Si c'est dans le passé, plus probable que ce soit payé
-            default => $this->faker->randomElement([
-                'paye' => 85,        // 85% de chance d'être payé
-                'en_attente' => 15   // 15% encore en attente
-            ])
-        };
+        return $this->state(fn (array $attributes) => [
+            'date_paiement' => $this->faker->dateTimeBetween('-1 month', 'now'),
+            'statut' => 'paye',
+        ]);
     }
 
     /**
-     * Ajuster le montant par rapport à la livraison
+     * État pour paiement à venir
      */
-    private function ajusterMontant(float $montantLivraison): float
+    public function upcoming(): static
     {
-        // Facteurs possibles
-        $facteurs = [
-            1.0,    // 70% - Montant identique
-            0.98,   // 10% - Déduction frais (-2%)
-            0.95,   // 5% - Déduction pénalité (-5%)
-            1.02,   // 10% - Bonus qualité (+2%)
-            1.05,   // 5% - Prime performance (+5%)
-        ];
-
-        $facteur = $this->faker->randomElement($facteurs);
-        return round($montantLivraison * $facteur, 2);
+        return $this->state(fn (array $attributes) => [
+            'date_paiement' => $this->faker->dateTimeBetween('now', '+2 months'),
+            'statut' => 'en_attente',
+        ]);
     }
 
     /**
-     * État pour un paiement en attente
+     * État pour paiement avec montant spécifique
      */
-    public function enAttente(): static
+    public function withMontant(float $montant): static
     {
-        return $this->state(function (array $attributes) {
-            // Date de paiement dans le futur
-            $datePaiement = $this->faker->dateTimeBetween('now', '+2 months');
-            
+        return $this->state(fn (array $attributes) => [
+            'montant' => $montant,
+        ]);
+    }
+
+    /**
+     * État pour paiement à une date spécifique
+     */
+    public function onDate($date): static
+    {
+        return $this->state(function (array $attributes) use ($date) {
+            $datePaiement = Carbon::parse($date);
+            $statut = $datePaiement->isPast() ? 'paye' : 'en_attente';
+
             return [
-                'date_paiement' => $datePaiement->format('Y-m-d'),
-                'statut' => 'en_attente',
-                'updated_at' => $attributes['created_at'] ?? now(),
+                'date_paiement' => $date,
+                'statut' => $statut,
             ];
         });
     }
 
     /**
-     * État pour un paiement effectué
+     * État pour paiement ce mois
      */
-    public function paye(): static
+    public function thisMonth(): static
     {
-        return $this->state(function (array $attributes) {
-            $datePaiement = Carbon::parse($attributes['date_paiement'] ?? now()->subDays(15));
-            
-            return [
-                'statut' => 'paye',
-                'updated_at' => $datePaiement->copy()->addHours(rand(1, 24)), // Mise à jour le jour du paiement
-            ];
-        });
+        return $this->state(fn (array $attributes) => [
+            'date_paiement' => $this->faker->dateTimeBetween('first day of this month', 'now'),
+            'statut' => 'paye',
+        ]);
     }
 
     /**
-     * État pour un paiement en retard
+     * État pour paiement le mois dernier
+     */
+    public function lastMonth(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'date_paiement' => $this->faker->dateTimeBetween('first day of last month', 'last day of last month'),
+            'statut' => 'paye',
+        ]);
+    }
+
+    /**
+     * État pour gros paiement
+     */
+    public function grosPaiement(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'montant' => $this->faker->randomFloat(2, 10000, 50000),
+        ]);
+    }
+
+    /**
+     * État pour petit paiement
+     */
+    public function petitPaiement(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'montant' => $this->faker->randomFloat(2, 500, 5000),
+        ]);
+    }
+
+    /**
+     * État pour paiement en retard
      */
     public function enRetard(): static
     {
         return $this->state(function (array $attributes) {
-            // Date de paiement dans le passé mais statut en attente
-            $datePaiement = $this->faker->dateTimeBetween('-2 months', '-1 week');
-            
+            // Date de paiement prévue dans le passé mais statut en_attente
+            $datePrevue = $this->faker->dateTimeBetween('-2 months', '-1 week');
+
             return [
-                'date_paiement' => $datePaiement->format('Y-m-d'),
+                'date_paiement' => $datePrevue,
                 'statut' => 'en_attente',
-                'updated_at' => $attributes['created_at'] ?? $datePaiement,
             ];
         });
     }
 
     /**
-     * État pour un gros montant
+     * État pour paiement ponctuel
      */
-    public function grosMontant(): static
-    {
-        return $this->state(fn (array $attributes) => [
-            'montant' => $this->faker->randomFloat(2, 8000, 25000),
-        ]);
-    }
-
-    /**
-     * État pour un petit montant
-     */
-    public function petitMontant(): static
-    {
-        return $this->state(fn (array $attributes) => [
-            'montant' => $this->faker->randomFloat(2, 500, 3000),
-        ]);
-    }
-
-    /**
-     * État pour un paiement récent
-     */
-    public function recent(): static
+    public function ponctuel(): static
     {
         return $this->state(function (array $attributes) {
-            $dateRecente = $this->faker->dateTimeBetween('-2 weeks', 'now');
-            
+            // Paiement effectué dans les délais normaux (7-30 jours après livraison)
             return [
-                'date_paiement' => $dateRecente->format('Y-m-d'),
-                'created_at' => $dateRecente,
-                'updated_at' => $dateRecente,
+                'statut' => 'paye',
             ];
         });
     }
 
     /**
-     * État avec bonus de qualité
+     * Créer des paiements basés sur les livraisons existantes d'une coopérative
      */
-    public function avecBonus(): static
+    public function createFromLivraisons(Cooperative $cooperative): array
+    {
+        $paiements = [];
+        $livraisons = $cooperative->livraisonsUsine()->where('statut', '!=', 'planifiee')->get();
+
+        foreach ($livraisons as $livraison) {
+            // 80% de chance qu'une livraison validée/payée ait un paiement associé
+            if ($this->faker->boolean(80)) {
+                $paiements[] = $this->forLivraison($livraison)->make()->toArray();
+            }
+        }
+
+        return $paiements;
+    }
+
+    /**
+     * Générer des paiements mensuels réguliers
+     */
+    public function monthlyPayments(Cooperative $cooperative, $startDate, $endDate): array
+    {
+        $paiements = [];
+        $current = Carbon::parse($startDate)->startOfMonth();
+        $end = Carbon::parse($endDate);
+
+        while ($current <= $end) {
+            // Paiement autour du 15 de chaque mois
+            $datePaiement = $current->copy()->day(15)->addDays($this->faker->numberBetween(-5, 5));
+            
+            // Montant basé sur les livraisons du mois précédent (simulé)
+            $montant = $this->faker->randomFloat(2, 5000, 25000);
+
+            $paiements[] = $this->forCooperative($cooperative)
+                               ->onDate($datePaiement)
+                               ->withMontant($montant)
+                               ->make()
+                               ->toArray();
+
+            $current->addMonth();
+        }
+
+        return $paiements;
+    }
+
+    /**
+     * Appliquer une logique de délai de paiement réaliste
+     */
+    public function withRealisticTiming(): static
     {
         return $this->state(function (array $attributes) {
-            $montantBase = $attributes['montant'] ?? 5000;
-            $bonus = $montantBase * 0.05; // Bonus de 5%
+            // Les paiements suivent généralement un délai de 15-45 jours
+            $delaiJours = $this->faker->numberBetween(15, 45);
             
-            return [
-                'montant' => round($montantBase + $bonus, 2),
-            ];
-        });
-    }
+            if (isset($attributes['id_livraison'])) {
+                $livraison = LivraisonUsine::find($attributes['id_livraison']);
+                if ($livraison) {
+                    $dateLivraison = Carbon::parse($livraison->date_livraison);
+                    $datePaiement = $dateLivraison->copy()->addDays($delaiJours);
+                    
+                    return [
+                        'date_paiement' => $datePaiement,
+                        'statut' => $datePaiement->isPast() ? 'paye' : 'en_attente',
+                    ];
+                }
+            }
 
-    /**
-     * État avec déduction
-     */
-    public function avecDeduction(): static
-    {
-        return $this->state(function (array $attributes) {
-            $montantBase = $attributes['montant'] ?? 5000;
-            $deduction = $montantBase * 0.03; // Déduction de 3%
-            
-            return [
-                'montant' => round($montantBase - $deduction, 2),
-            ];
-        });
-    }
-
-    /**
-     * Configurer pour une coopérative spécifique
-     */
-    public function pourCooperative(int $idCooperative): static
-    {
-        return $this->state(fn (array $attributes) => [
-            'id_cooperative' => $idCooperative,
-        ]);
-    }
-
-    /**
-     * Configurer pour une livraison spécifique
-     */
-    public function pourLivraison(int $idLivraison): static
-    {
-        return $this->state(fn (array $attributes) => [
-            'id_livraison' => $idLivraison,
-        ]);
-    }
-
-    /**
-     * Configurer pour une date spécifique
-     */
-    public function pourDate(string $date): static
-    {
-        return $this->state(function (array $attributes) use ($date) {
-            $dateCarbon = Carbon::parse($date);
-            
-            return [
-                'date_paiement' => $date,
-                'created_at' => $dateCarbon->copy()->subDays(rand(1, 10)),
-                'updated_at' => $dateCarbon,
-            ];
+            return [];
         });
     }
 }

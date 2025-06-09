@@ -14,7 +14,6 @@ return new class extends Migration
         Schema::create('paiements_cooperative_usine', function (Blueprint $table) {
             $table->id('id_paiement');
             $table->unsignedBigInteger('id_cooperative');
-            $table->unsignedBigInteger('id_livraison');
             $table->date('date_paiement');
             $table->decimal('montant', 12, 2);
             $table->enum('statut', ['en_attente', 'paye'])->default('en_attente');
@@ -22,11 +21,9 @@ return new class extends Migration
             
             // Foreign key constraints
             $table->foreign('id_cooperative')->references('id_cooperative')->on('cooperatives')->onDelete('cascade');
-            $table->foreign('id_livraison')->references('id_livraison')->on('livraisons_usine')->onDelete('cascade');
             
             // Add indexes for better performance
             $table->index('id_cooperative');
-            $table->index('id_livraison');
             $table->index('date_paiement');
             $table->index('statut');
             $table->index(['id_cooperative', 'statut']);

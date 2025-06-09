@@ -76,11 +76,11 @@ class PaiementController extends Controller
         $cooperativeId = $this->getCurrentCooperativeId();
         $cooperative = $this->getCurrentCooperative();
         
-        // Get selected month/year or default to current and previous month
+        // Get selected month/year or default to current month
         $selectedMonth = $request->get('mois', now()->month);
         $selectedYear = $request->get('annee', now()->year);
         
-        // Calculate quinzaines data
+        // Calculate quinzaines data - SEULEMENT 1 MOIS (2 quinzaines)
         $quinzaines = $this->getQuinzainesData($cooperativeId, $selectedMonth, $selectedYear);
         
         // Calculate overall statistics
@@ -91,34 +91,33 @@ class PaiementController extends Controller
 
     /**
      * Calculate quinzaines data for a specific month/year.
+     * MODIFIÉ : Affiche seulement 1 mois (2 quinzaines) au lieu de 3 mois
      */
     private function getQuinzainesData($cooperativeId, $month, $year)
     {
         $quinzaines = [];
         
-        // Generate quinzaines for current and previous 2 months
-        for ($monthOffset = 0; $monthOffset <= 2; $monthOffset++) {
-            $date = Carbon::create($year, $month)->subMonths($monthOffset);
-            
-            // First quinzaine: 1st to 15th
-            $quinzaine1 = $this->calculateQuinzaineData(
-                $cooperativeId,
-                $date->copy()->startOfMonth(),
-                $date->copy()->startOfMonth()->addDays(14),
-                "1-15 " . $date->translatedFormat('F Y')
-            );
-            
-            // Second quinzaine: 16th to end of month
-            $quinzaine2 = $this->calculateQuinzaineData(
-                $cooperativeId,
-                $date->copy()->startOfMonth()->addDays(15),
-                $date->copy()->endOfMonth(),
-                "16-" . $date->endOfMonth()->day . " " . $date->translatedFormat('F Y')
-            );
-            
-            $quinzaines[] = $quinzaine1;
-            $quinzaines[] = $quinzaine2;
-        }
+        // Generate quinzaines SEULEMENT pour le mois sélectionné
+        $date = Carbon::create($year, $month);
+        
+        // First quinzaine: 1st to 15th
+        $quinzaine1 = $this->calculateQuinzaineData(
+            $cooperativeId,
+            $date->copy()->startOfMonth(),
+            $date->copy()->startOfMonth()->addDays(14),
+            "1-15 " . $date->translatedFormat('F Y')
+        );
+        
+        // Second quinzaine: 16th to end of month
+        $quinzaine2 = $this->calculateQuinzaineData(
+            $cooperativeId,
+            $date->copy()->startOfMonth()->addDays(15),
+            $date->copy()->endOfMonth(),
+            "16-" . $date->endOfMonth()->day . " " . $date->translatedFormat('F Y')
+        );
+        
+        $quinzaines[] = $quinzaine1;
+        $quinzaines[] = $quinzaine2;
         
         // Sort by date desc (most recent first)
         usort($quinzaines, function($a, $b) {
@@ -144,7 +143,7 @@ class PaiementController extends Controller
         $totalMontant = $livraisons->sum('montant_total');
         $nombreLivraisons = $livraisons->count();
 
-        // Check payment status
+        // Check payment status - MODIFIÉ : chercher par période au lieu de par livraison
         $paiementsExistants = PaiementCooperativeUsine::where('id_cooperative', $cooperativeId)
             ->whereBetween('date_paiement', [$dateDebut, $dateFin])
             ->get();
@@ -232,6 +231,7 @@ class PaiementController extends Controller
 
     /**
      * Calculate payments for a specific period (every 15 days).
+     * MODIFIÉ : Créer UN SEUL paiement par quinzaine au lieu d'un par livraison
      */
     public function calculerPeriode(Request $request)
     {
@@ -264,43 +264,39 @@ class PaiementController extends Controller
                     ->with('error', 'Aucune livraison validée trouvée pour cette période.');
             }
 
-            $totalPaiements = 0;
-            $nombrePaiements = 0;
-
-            foreach ($livraisons as $livraison) {
-                // Check if payment already exists
-                $existingPaiement = PaiementCooperativeUsine::where('id_livraison', $livraison->id_livraison)->first();
-                
-                if (!$existingPaiement) {
-                    // Create payment
-                    $paiement = PaiementCooperativeUsine::create([
-                        'id_cooperative' => $cooperativeId,
-                        'id_livraison' => $livraison->id_livraison,
-                        'date_paiement' => $endDate, // Payment date is end of period
-                        'montant' => $livraison->montant_total,
-                        'statut' => 'en_attente'
-                    ]);
-                    
-                    $totalPaiements += $paiement->montant;
-                    $nombrePaiements++;
-                }
+            // MODIFIÉ : Vérifier si un paiement existe déjà pour cette période
+            $existingPaiement = PaiementCooperativeUsine::where('id_cooperative', $cooperativeId)
+                ->whereBetween('date_paiement', [$startDate, $endDate])
+                ->first();
+            
+            if ($existingPaiement) {
+                return redirect()
+                    ->back()
+                    ->with('info', 'Un paiement a déjà été calculé pour cette période.');
             }
+
+            // Calculer le montant total de toutes les livraisons de la période
+            $montantTotal = $livraisons->sum('montant_total');
+            $quantiteTotal = $livraisons->sum('quantite_litres');
+
+            // Créer UN SEUL paiement pour toute la quinzaine
+            $paiement = PaiementCooperativeUsine::create([
+                'id_cooperative' => $cooperativeId,
+                'date_paiement' => $endDate, // Payment date is end of period
+                'montant' => $montantTotal,
+                'statut' => 'en_attente'
+            ]);
 
             DB::commit();
 
-            if ($nombrePaiements > 0) {
-                return redirect()
-                    ->route('gestionnaire.paiements.index')
-                    ->with('success', sprintf(
-                        'Paiements calculés avec succès ! %d paiement(s) créé(s) pour un montant total de %s DH',
-                        $nombrePaiements,
-                        number_format($totalPaiements, 2)
-                    ));
-            } else {
-                return redirect()
-                    ->back()
-                    ->with('info', 'Tous les paiements pour cette période ont déjà été calculés.');
-            }
+            return redirect()
+                ->route('gestionnaire.paiements.index')
+                ->with('success', sprintf(
+                    'Paiement calculé avec succès ! Montant total: %s DH (Quantité: %s L, %d livraison(s))',
+                    number_format($montantTotal, 2),
+                    number_format($quantiteTotal, 2),
+                    $livraisons->count()
+                ));
                 
         } catch (\Exception $e) {
             DB::rollBack();

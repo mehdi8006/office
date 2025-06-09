@@ -3,276 +3,183 @@
 namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\DB;
+use App\Models\Utilisateur;
+use App\Models\Cooperative;
+use App\Models\MembreEleveur;
+use App\Models\ReceptionLait;
+use App\Models\StockLait;
+use App\Models\LivraisonUsine;
+use App\Models\PaiementCooperativeUsine;
+use App\Models\PaiementCooperativeEleveur;
+use Carbon\Carbon;
 
 class DatabaseSeeder extends Seeder
 {
+
     /**
      * Seed the application's database.
      */
     public function run(): void
     {
-        $this->command->info('🚀 Démarrage du processus de seeding complet...');
-        $this->command->info('⚠️  ATTENTION: Ce processus va créer des milliers d\'enregistrements et peut prendre plusieurs minutes.');
-        
-        // Confirmation avant exécution
-        if (!$this->command->confirm('Voulez-vous continuer ?', true)) {
-            $this->command->info('❌ Processus annulé par l\'utilisateur.');
-            return;
-        }
+        $this->command->info('🚀 Début du seeding complet du système laitier...');
 
-        $startTime = microtime(true);
-
-        // ÉTAPE 1: Seeders des tables de base (migrations 1-2)
-        $this->command->info("\n🏗️  ÉTAPE 1: Tables de base (Utilisateurs & Coopératives)");
-        $this->command->info('ℹ️  Assurez-vous d\'avoir exécuté UtilisateurSeeder et CooperativeSeeder avant de continuer.');
-        
-        if (!$this->command->confirm('Les seeders des utilisateurs et coopératives ont-ils été exécutés ?', false)) {
-            $this->command->error('❌ Veuillez d\'abord exécuter:');
-            $this->command->error('   php artisan db:seed --class=UtilisateurSeeder');
-            $this->command->error('   php artisan db:seed --class=CooperativeSeeder');
-            return;
-        }
-
-        // ÉTAPE 2: Membres Éleveurs (Migration 3)
-        $this->command->info("\n👥 ÉTAPE 2: Création des membres éleveurs...");
-        $this->call(MembreEleveurSeeder::class);
-
-        // ÉTAPE 3: Réceptions de Lait (Migration 4)
-        $this->command->info("\n🥛 ÉTAPE 3: Génération de l'historique des réceptions de lait...");
-        $this->call(ReceptionLaitSeeder::class);
-
-        // ÉTAPE 4: Stocks de Lait (Migration 5)
-        $this->command->info("\n📦 ÉTAPE 4: Consolidation des stocks quotidiens...");
-        $this->call(StockLaitSeeder::class);
-
-        // ÉTAPE 5: Livraisons Usine (Migration 6)
-        $this->command->info("\n🚛 ÉTAPE 5: Génération des livraisons à l'usine...");
-        $this->call(LivraisonUsineSeeder::class);
-
-        // ÉTAPE 6: Paiements Coopérative-Usine (Migration 7)
-        $this->command->info("\n💰 ÉTAPE 6: Création des paiements coopérative-usine...");
-        $this->call(PaiementCooperativeUsineSeeder::class);
-
-        // Statistiques finales
-        $this->afficherStatistiquesFinales($startTime);
-        
-        $this->command->info("\n✅ PROCESSUS TERMINÉ AVEC SUCCÈS!");
-        $this->command->info("🎉 Votre base de données est maintenant peuplée avec des données réalistes.");
-        $this->command->info("📊 Vous pouvez maintenant tester votre application avec un historique complet de 6 mois.");
+        // Seeding complet par défaut
+        $this->runFullMode();
     }
 
     /**
-     * Afficher les statistiques finales de création
+     * Mode complet: tout créer depuis zéro
      */
-    private function afficherStatistiquesFinales(float $startTime): void
+    private function runFullMode(): void
     {
-        $endTime = microtime(true);
-        $duration = round($endTime - $startTime, 2);
+        $this->command->info('📋 Mode: Seeding complet');
 
-        $this->command->info("\n📊 RAPPORT FINAL:");
-        $this->command->info("⏱️  Temps d'exécution: {$duration} secondes");
+        // 1. Nettoyer d'abord
+        $this->call(CleanDataSeeder::class);
+
+        // 2. Créer les données de base
+        $this->call(BaseDataSeeder::class);
+
+        // 3. Générer les données opérationnelles
+        $this->call(OperationalDataSeeder::class);
+
+        // 4. Ajouter des scénarios de test
+        $this->call(TestScenariosSeeder::class);
+
+        $this->command->info('✅ Seeding complet terminé!');
+        $this->printFinalStatistics();
+    }
+
+    /**
+     * Mode nettoyage uniquement
+     */
+    private function runCleanMode(): void
+    {
+        $this->command->info('📋 Mode: Nettoyage');
+        $this->call(CleanDataSeeder::class);
+    }
+
+    /**
+     * Mode données de base uniquement
+     */
+    private function runBaseOnly(): void
+    {
+        $this->command->info('📋 Mode: Données de base seulement');
+        $this->call(BaseDataSeeder::class);
+    }
+
+    /**
+     * Mode données opérationnelles seulement
+     */
+    private function runOperationalOnly(): void
+    {
+        $this->command->info('📋 Mode: Données opérationnelles seulement');
         
-        // Compter les enregistrements créés
-        $stats = [
-            'Membres Éleveurs' => \App\Models\MembreEleveur::count(),
-            'Réceptions de Lait' => \App\Models\ReceptionLait::count(),
-            'Stocks de Lait' => \App\Models\StockLait::count(),
-            'Livraisons Usine' => \App\Models\LivraisonUsine::count(),
-            'Paiements Usine' => \App\Models\PaiementCooperativeUsine::count(),
-        ];
+        // Nettoyer seulement les données opérationnelles
+        $this->command->info('🧹 Nettoyage des données opérationnelles...');
+        $cleaner = new CleanDataSeeder();
+        $cleaner->cleanOperationalOnly();
 
-        $this->command->info("\n📈 Enregistrements créés:");
-        $totalRecords = 0;
-        foreach ($stats as $table => $count) {
-            $this->command->info("   - {$table}: " . number_format($count));
-            $totalRecords += $count;
-        }
-        $this->command->info("   TOTAL: " . number_format($totalRecords) . " enregistrements");
-
-        // Calculer les volumes financiers
-        $volumeFinancier = $this->calculerVolumeFinancier();
-        if ($volumeFinancier) {
-            $this->command->info("\n💵 Volumes financiers simulés:");
-            $this->command->info("   - Chiffre d'affaires total: " . number_format($volumeFinancier['ca_total'], 2) . " DH");
-            $this->command->info("   - Volume de lait total: " . number_format($volumeFinancier['volume_total'], 2) . " litres");
-            $this->command->info("   - Prix moyen: " . number_format($volumeFinancier['prix_moyen'], 2) . " DH/litre");
-        }
-
-        // Période couverte
-        $periode = $this->calculerPeriodeCouverte();
-        if ($periode) {
-            $this->command->info("\n📅 Période d'historique:");
-            $this->command->info("   - Du: {$periode['debut']}");
-            $this->command->info("   - Au: {$periode['fin']}");
-            $this->command->info("   - Durée: {$periode['duree']} jours");
-        }
+        // Générer les nouvelles données opérationnelles
+        $this->call(OperationalDataSeeder::class);
     }
 
     /**
-     * Calculer le volume financier total
+     * Mode test: créer uniquement des scénarios de test
      */
-    private function calculerVolumeFinancier(): ?array
+    private function runTestMode(): void
     {
-        try {
-            $stats = \App\Models\LivraisonUsine::selectRaw('
-                SUM(montant_total) as ca_total,
-                SUM(quantite_litres) as volume_total,
-                AVG(prix_unitaire) as prix_moyen
-            ')->first();
-
-            if ($stats && $stats->ca_total > 0) {
-                return [
-                    'ca_total' => $stats->ca_total,
-                    'volume_total' => $stats->volume_total,
-                    'prix_moyen' => $stats->prix_moyen,
-                ];
-            }
-        } catch (\Exception $e) {
-            // Si les modèles n'existent pas encore, ignorer silencieusement
-        }
-
-        return null;
+        $this->command->info('📋 Mode: Scénarios de test');
+        $this->call(TestScenariosSeeder::class);
     }
 
+
+
     /**
-     * Calculer la période couverte par les données
+     * Afficher les statistiques finales
      */
-    private function calculerPeriodeCouverte(): ?array
+    private function printFinalStatistics(): void
     {
-        try {
-            $periode = \App\Models\ReceptionLait::selectRaw('
-                MIN(date_reception) as debut,
-                MAX(date_reception) as fin,
-                DATEDIFF(MAX(date_reception), MIN(date_reception)) + 1 as duree
-            ')->first();
-
-            if ($periode && $periode->debut) {
-                return [
-                    'debut' => \Carbon\Carbon::parse($periode->debut)->format('d/m/Y'),
-                    'fin' => \Carbon\Carbon::parse($periode->fin)->format('d/m/Y'),
-                    'duree' => $periode->duree,
-                ];
-            }
-        } catch (\Exception $e) {
-            // Si les modèles n'existent pas encore, ignorer silencieusement
-        }
-
-        return null;
-    }
-}
-
-/**
- * SEEDER SPÉCIALISÉ POUR LES MIGRATIONS 3-7 UNIQUEMENT
- * 
- * Si vous voulez exécuter seulement les seeders des migrations 3 à 7:
- * php artisan db:seed --class=LaiterieSeeders
- */
-class LaiterieSeeders extends Seeder
-{
-    /**
-     * Run the database seeds for migrations 3-7 only.
-     */
-    public function run(): void
-    {
-        $this->command->info('🥛 Exécution des seeders spécifiques à la laiterie (migrations 3-7)...');
+        $this->command->info("\n📊 STATISTIQUES FINALES:");
+        $this->command->info("======================");
         
-        // Vérifications préalables
-        $cooperativesCount = \App\Models\Cooperative::count();
-        if ($cooperativesCount === 0) {
-            $this->command->error('❌ Aucune coopérative trouvée. Veuillez d\'abord exécuter CooperativeSeeder.');
-            return;
+        // Utilisateurs
+        $this->command->info("👥 Utilisateurs: " . Utilisateur::count());
+        $roles = ['direction', 'usva', 'gestionnaire', 'éleveur'];
+        foreach ($roles as $role) {
+            $count = Utilisateur::where('role', $role)->count();
+            $this->command->info("   - " . ucfirst($role) . ": {$count}");
         }
-
-        $this->command->info("✅ {$cooperativesCount} coopératives trouvées. Démarrage du processus...");
-
-        $startTime = microtime(true);
-
-        // Exécution séquentielle des seeders
-        $this->command->info("\n1️⃣  Création des membres éleveurs...");
-        $this->call(MembreEleveurSeeder::class);
-
-        $this->command->info("\n2️⃣  Génération des réceptions de lait...");
-        $this->call(ReceptionLaitSeeder::class);
-
-        $this->command->info("\n3️⃣  Consolidation des stocks...");
-        $this->call(StockLaitSeeder::class);
-
-        $this->command->info("\n4️⃣  Création des livraisons...");
-        $this->call(LivraisonUsineSeeder::class);
-
-        $this->command->info("\n5️⃣  Génération des paiements...");
-        $this->call(PaiementCooperativeUsineSeeder::class);
-
-        $endTime = microtime(true);
-        $duration = round($endTime - $startTime, 2);
-
-        $this->command->info("\n✅ Seeders de laiterie terminés en {$duration} secondes!");
-    }
-}
-
-/**
- * SEEDER DE DÉVELOPPEMENT - DONNÉES MINIMALES POUR LES TESTS
- * 
- * Pour créer rapidement un jeu de données minimal pour le développement:
- * php artisan db:seed --class=DevLaiterieSeeder
- */
-class DevLaiterieSeeder extends Seeder
-{
-    /**
-     * Run a minimal dataset for development.
-     */
-    public function run(): void
-    {
-        $this->command->info('🔧 Création d\'un jeu de données minimal pour le développement...');
-
-        // Vérifier les prérequis
-        $cooperativesCount = \App\Models\Cooperative::count();
-        if ($cooperativesCount === 0) {
-            $this->command->error('❌ Aucune coopérative trouvée.');
-            return;
-        }
-
-        // Limiter les données pour le développement
-        $cooperatives = \App\Models\Cooperative::limit(2)->get(); // Seulement 2 coopératives
-
-        foreach ($cooperatives as $cooperative) {
-            $this->command->info("Traitement de: {$cooperative->nom_cooperative}");
-
-            // 10-15 membres par coopérative seulement
-            \App\Models\MembreEleveur::factory()
-                ->count(rand(10, 15))
-                ->actif()
-                ->create(['id_cooperative' => $cooperative->id_cooperative]);
-        }
-
-        // Réceptions sur 1 mois seulement
-        $membresActifs = \App\Models\MembreEleveur::where('statut', 'actif')->get();
-        $dateDebut = \Carbon\Carbon::now()->subMonth();
-        $dateFin = \Carbon\Carbon::now();
-
-        $this->command->info("Création des réceptions pour {$membresActifs->count()} membres sur 1 mois...");
-
-        foreach ($membresActifs as $membre) {
-            $dateActuelle = $dateDebut->copy();
-            while ($dateActuelle->lte($dateFin)) {
-                if (rand(1, 100) <= 70) { // 70% de chance de livrer
-                    \App\Models\ReceptionLait::factory()
-                        ->pourMembre($membre->id_membre, $membre->id_cooperative)
-                        ->pourDate($dateActuelle->format('Y-m-d'))
-                        ->create();
-                }
-                $dateActuelle->addDay();
-            }
-        }
-
-        // Générer les stocks, livraisons et paiements
-        $this->call(StockLaitSeeder::class);
-        $this->call(LivraisonUsineSeeder::class);
-        $this->call(PaiementCooperativeUsineSeeder::class);
-
-        $this->command->info("✅ Jeu de données de développement créé avec succès!");
-        $this->command->info("📊 Données créées: " . 
-            \App\Models\MembreEleveur::count() . " membres, " . 
-            \App\Models\ReceptionLait::count() . " réceptions");
+        
+        // Coopératives
+        $totalCoops = Cooperative::count();
+        $coopsActives = Cooperative::where('statut', 'actif')->count();
+        $coopsAvecResponsable = Cooperative::whereNotNull('responsable_id')->count();
+        
+        $this->command->info("\n🏢 Coopératives: {$totalCoops}");
+        $this->command->info("   - Actives: {$coopsActives}");
+        $this->command->info("   - Avec responsable: {$coopsAvecResponsable}");
+        
+        // Membres
+        $totalMembres = MembreEleveur::count();
+        $membresActifs = MembreEleveur::where('statut', 'actif')->count();
+        $membresInactifs = MembreEleveur::where('statut', 'inactif')->count();
+        $membresSupprimes = MembreEleveur::where('statut', 'suppression')->count();
+        
+        $this->command->info("\n🐄 Membres éleveurs: {$totalMembres}");
+        $this->command->info("   - Actifs: {$membresActifs}");
+        $this->command->info("   - Inactifs: {$membresInactifs}");
+        $this->command->info("   - Supprimés: {$membresSupprimes}");
+        
+        // Réceptions
+        $totalReceptions = ReceptionLait::count();
+        $totalLait = ReceptionLait::sum('quantite_litres') ?? 0;
+        $moyenneReception = $totalReceptions > 0 ? round($totalLait / $totalReceptions, 2) : 0;
+        
+        $this->command->info("\n🥛 Réceptions: {$totalReceptions}");
+        $this->command->info("   - Quantité totale: " . number_format($totalLait, 2) . " L");
+        $this->command->info("   - Moyenne par réception: {$moyenneReception} L");
+        
+        // Stocks
+        $totalStocks = StockLait::count();
+        $this->command->info("\n📦 Stocks: {$totalStocks} entrées");
+        
+        // Livraisons
+        $totalLivraisons = LivraisonUsine::count();
+        $totalLivraisionVolume = LivraisonUsine::sum('quantite_litres') ?? 0;
+        $livraisonsPlanifiees = LivraisonUsine::where('statut', 'planifiee')->count();
+        $livraisonsValidees = LivraisonUsine::where('statut', 'validee')->count();
+        $livraisonsPayees = LivraisonUsine::where('statut', 'payee')->count();
+        
+        $this->command->info("\n🚚 Livraisons usine: {$totalLivraisons}");
+        $this->command->info("   - Quantité totale: " . number_format($totalLivraisionVolume, 2) . " L");
+        $this->command->info("   - Planifiées: {$livraisonsPlanifiees}");
+        $this->command->info("   - Validées: {$livraisonsValidees}");
+        $this->command->info("   - Payées: {$livraisonsPayees}");
+        
+        // Paiements usine
+        $totalPaiementsUsine = PaiementCooperativeUsine::count();
+        $montantPaiementsUsine = PaiementCooperativeUsine::sum('montant') ?? 0;
+        $paiementsUsinePayes = PaiementCooperativeUsine::where('statut', 'paye')->count();
+        $paiementsUsineAttente = PaiementCooperativeUsine::where('statut', 'en_attente')->count();
+        
+        $this->command->info("\n💰 Paiements usine: {$totalPaiementsUsine}");
+        $this->command->info("   - Montant total: " . number_format($montantPaiementsUsine, 2) . " DH");
+        $this->command->info("   - Payés: {$paiementsUsinePayes}");
+        $this->command->info("   - En attente: {$paiementsUsineAttente}");
+        
+        // Paiements éleveurs
+        $totalPaiementsEleveurs = PaiementCooperativeEleveur::count();
+        $montantPaiementsEleveurs = PaiementCooperativeEleveur::sum('montant_total') ?? 0;
+        $paiementsEleveursPayes = PaiementCooperativeEleveur::where('statut', 'paye')->count();
+        $paiementsEleveursCalcules = PaiementCooperativeEleveur::where('statut', 'calcule')->count();
+        
+        $this->command->info("\n💳 Paiements éleveurs: {$totalPaiementsEleveurs}");
+        $this->command->info("   - Montant total: " . number_format($montantPaiementsEleveurs, 2) . " DH");
+        $this->command->info("   - Payés: {$paiementsEleveursPayes}");
+        $this->command->info("   - Calculés: {$paiementsEleveursCalcules}");
+        
+        $this->command->info("\n🎉 Base de données prête pour les tests!");
     }
 }

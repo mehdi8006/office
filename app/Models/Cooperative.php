@@ -226,18 +226,12 @@ class Cooperative extends Model
     /**
      * Get all paiements from usine for this cooperative.
      */
-    public function paiementsUsine()
-    {
-        return $this->hasMany(PaiementCooperativeUsine::class, 'id_cooperative', 'id_cooperative');
-    }
+    
 
     /**
      * Get all paiements to eleveurs from this cooperative.
      */
-    public function paiementsEleveurs()
-    {
-        return $this->hasMany(PaiementCooperativeEleveur::class, 'id_cooperative', 'id_cooperative');
-    }
+    
 
     /**
      * Get planned livraisons.
@@ -269,20 +263,12 @@ class Cooperative extends Model
     /**
      * Get pending payments from usine.
      */
-    public function paiementsUsineEnAttente()
-    {
-        return $this->hasMany(PaiementCooperativeUsine::class, 'id_cooperative', 'id_cooperative')
-                    ->where('statut', 'en_attente');
-    }
+   
 
     /**
      * Get calculated payments to eleveurs.
      */
-    public function paiementsEleveursCalcules()
-    {
-        return $this->hasMany(PaiementCooperativeEleveur::class, 'id_cooperative', 'id_cooperative')
-                    ->where('statut', 'calcule');
-    }
+   
 
     /**
      * Get total livraisons amount.
@@ -295,9 +281,71 @@ class Cooperative extends Model
     /**
      * Get total payments received from usine.
      */
+    
+
+    /**
+     * Get total payments made to eleveurs.
+     */
+  
+    // Relations avec les paiements mises à jour (à ajouter dans le modèle Cooperative.php existant)
+
+    /**
+     * Get all paiements from usine for this cooperative.
+     */
+    public function paiementsUsine()
+    {
+        return $this->hasMany(PaiementCooperativeUsine::class, 'id_cooperative', 'id_cooperative');
+    }
+
+    /**
+     * Get all paiements to eleveurs from this cooperative.
+     */
+    public function paiementsEleveurs()
+    {
+        return $this->hasMany(PaiementCooperativeEleveur::class, 'id_cooperative', 'id_cooperative');
+    }
+
+    /**
+     * Get pending payments from usine.
+     */
+    public function paiementsUsineEnAttente()
+    {
+        return $this->hasMany(PaiementCooperativeUsine::class, 'id_cooperative', 'id_cooperative')
+                    ->where('statut', 'en_attente');
+    }
+
+    /**
+     * Get paid payments from usine.
+     */
+    public function paiementsUsinePayes()
+    {
+        return $this->hasMany(PaiementCooperativeUsine::class, 'id_cooperative', 'id_cooperative')
+                    ->where('statut', 'paye');
+    }
+
+    /**
+     * Get calculated payments to eleveurs.
+     */
+    public function paiementsEleveursCalcules()
+    {
+        return $this->hasMany(PaiementCooperativeEleveur::class, 'id_cooperative', 'id_cooperative')
+                    ->where('statut', 'calcule');
+    }
+
+    /**
+     * Get total payments received from usine.
+     */
     public function getTotalPaiementsUsineAttribute()
     {
-        return $this->paiementsUsine()->where('statut', 'paye')->sum('montant');
+        return $this->paiementsUsinePayes()->sum('montant');
+    }
+
+    /**
+     * Get total pending payments from usine.
+     */
+    public function getTotalPaiementsUsineEnAttenteAttribute()
+    {
+        return $this->paiementsUsineEnAttente()->sum('montant');
     }
 
     /**

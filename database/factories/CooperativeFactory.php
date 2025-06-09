@@ -14,212 +14,152 @@ class CooperativeFactory extends Factory
     protected $model = Cooperative::class;
 
     /**
+     * Noms de coopératives agricoles marocaines réalistes
+     */
+    private static $nomsCooperatives = [
+        'Coopérative Agricole Atlas',
+        'Coopérative Laitière Rif',
+        'Coopérative Agricole Souss',
+        'Coopérative Laitière Tadla',
+        'Coopérative Agricole Chaouia',
+        'Coopérative Laitière Gharb',
+        'Coopérative Agricole Doukkala',
+        'Coopérative Laitière Saiss',
+        'Coopérative Agricole Haouz',
+        'Coopérative Laitière Zaër',
+        'Coopérative Agricole Loukkos',
+        'Coopérative Laitière Mamora',
+        'Coopérative Agricole Abda',
+        'Coopérative Laitière Chiadma',
+        'Coopérative Agricole Rehamna',
+        'Coopérative Laitière Anti-Atlas',
+        'Coopérative Agricole Moyen Atlas',
+        'Coopérative Laitière Haut Atlas',
+        'Coopérative Agricole Tafilalet',
+        'Coopérative Laitière Oriental'
+    ];
+
+    /**
+     * Villes et régions marocaines
+     */
+    private static $villes = [
+        'Casablanca', 'Rabat', 'Fès', 'Marrakech', 'Agadir', 'Tanger', 'Meknès', 'Oujda',
+        'Kénitra', 'Tétouan', 'Salé', 'Temara', 'Safi', 'Mohammedia', 'Khouribga', 'Beni Mellal',
+        'El Jadida', 'Nador', 'Settat', 'Berrechid', 'Khemisset', 'Inezgane', 'Larache', 'Guelmim'
+    ];
+
+    /**
+     * Quartiers/Zones agricoles
+     */
+    private static $quartiers = [
+        'Zone Industrielle', 'Hay Al Massira', 'Hay Al Mohammadi', 'Quartier Administratif',
+        'Zone Agricole', 'Douar', 'Hay Essalam', 'Hay Al Wifaq', 'Zone Rurale',
+        'Commune Rurale', 'Centre Ville', 'Nouvelle Ville', 'Médina', 'Hay Al Houda'
+    ];
+
+    /**
      * Define the model's default state.
      */
     public function definition(): array
     {
-        // Noms de coopératives laitières réalistes au Maroc
-        $nomsCooperatives = [
-            'Coopérative Laitière Al Baraka',
-            'Coopérative Agro-Pastorale Al Majd',
-            'Coopérative des Éleveurs de l\'Atlas',
-            'Coopérative Laitière Oum Rabia',
-            'Coopérative Al Hoceima Lait',
-            'Coopérative Agricole Souss Massa',
-            'Coopérative Laitière Tadla Azilal',
-            'Coopérative des Bergers du Rif',
-            'Coopérative Al Wahda Laitière',
-            'Coopérative Agro-Pastorale Doukkala',
-            'Coopérative Laitière Chaouia',
-            'Coopérative Al Firdaws Lait',
-            'Coopérative des Éleveurs Zaërs',
-            'Coopérative Laitière Gharb',
-            'Coopérative Al Nour Agro-Pastorale',
-            'Coopérative Laitière Oriental',
-            'Coopérative Agro-Pastorale Haouz',
-            'Coopérative Al Karama Lait',
-            'Coopérative des Producteurs Khénifra',
-            'Coopérative Laitière Béni Mellal',
-            'Coopérative Al Amal des Éleveurs',
-            'Coopérative Agro-Pastorale Tafilalet',
-            'Coopérative Laitière Anti-Atlas',
-            'Coopérative Al Mountada Lait',
-            'Coopérative des Bergers Fès-Meknès',
-            'Coopérative Laitière Moyen Atlas',
-            'Coopérative Al Ikhlass Agro-Pastorale',
-            'Coopérative des Éleveurs Rabat-Salé',
-            'Coopérative Laitière Casablanca-Settat',
-            'Coopérative Al Wifaq Lait'
-        ];
-
-        // Régions et villes du Maroc pour les adresses
-        $regions = [
-            'Casablanca-Settat' => ['Casablanca', 'Settat', 'Berrechid', 'Mohammedia', 'El Jadida'],
-            'Rabat-Salé-Kénitra' => ['Rabat', 'Salé', 'Kénitra', 'Témara', 'Khemisset'],
-            'Fès-Meknès' => ['Fès', 'Meknès', 'Taza', 'Sefrou', 'Ifrane'],
-            'Marrakech-Safi' => ['Marrakech', 'Safi', 'Essaouira', 'Kelâa des Sraghna'],
-            'Souss-Massa' => ['Agadir', 'Taroudant', 'Tiznit', 'Ouarzazate'],
-            'Tanger-Tétouan-Al Hoceïma' => ['Tanger', 'Tétouan', 'Al Hoceïma', 'Larache'],
-            'Oriental' => ['Oujda', 'Nador', 'Berkane', 'Taourirt'],
-            'Drâa-Tafilalet' => ['Errachidia', 'Ouarzazate', 'Zagora', 'Midelt'],
-            'Béni Mellal-Khénifra' => ['Béni Mellal', 'Khénifra', 'Khouribga', 'Azilal'],
-            'Guelmim-Oued Noun' => ['Guelmim', 'Tan-Tan', 'Sidi Ifni']
-        ];
-
-        $regionSelectionnee = $this->faker->randomElement(array_keys($regions));
-        $ville = $this->faker->randomElement($regions[$regionSelectionnee]);
-
-        // Générer le nom de la coopérative
-        $nomCooperative = $this->faker->unique()->randomElement($nomsCooperatives);
-
-        // Adresse réaliste
-        $adresse = $this->genererAdresseRealistic($ville, $regionSelectionnee);
-
-        // Email professionnel basé sur le nom
-        $emailBase = $this->genererEmailProfessionnel($nomCooperative);
-
         return [
-            'matricule' => $this->genererMatriculeUnique(),
-            'nom_cooperative' => $nomCooperative,
-            'adresse' => $adresse,
-            'telephone' => $this->genererTelephoneProfessionnel(),
-            'email' => $emailBase,
-            'statut' => $this->faker->randomElement([
-                'actif' => 90,      // 90% actives
-                'inactif' => 10     // 10% inactives
-            ]),
-            'responsable_id' => null, // Sera assigné dans le seeder si des utilisateurs existent
-            'created_at' => $this->faker->dateTimeBetween('-3 years', '-6 months'),
-            'updated_at' => function (array $attributes) {
-                return $this->faker->dateTimeBetween($attributes['created_at'], 'now');
-            },
+            'matricule' => $this->generateMatricule(),
+            'nom_cooperative' => $this->faker->unique()->randomElement(self::$nomsCooperatives),
+            'adresse' => $this->generateAdresse(),
+            'telephone' => $this->generateTelephone(),
+            'email' => $this->generateEmail(),
+            'statut' => $this->faker->randomElement(['actif', 'inactif']),
+            'responsable_id' => null, // Sera assigné par le seeder
         ];
     }
 
     /**
-     * Générer un matricule unique pour la coopérative
+     * Générer un matricule unique pour coopérative
      */
-    private function genererMatriculeUnique(): string
+    private function generateMatricule(): string
     {
-        // Format: COOP + Année + Numéro séquentiel (ex: COOP240001)
-        $annee = $this->faker->numberBetween(21, 24); // 2021-2024
-        $sequence = str_pad($this->faker->unique()->numberBetween(1, 9999), 4, '0', STR_PAD_LEFT);
-        
-        return "COOP{$annee}{$sequence}";
+        do {
+            $matricule = 'COOP' . str_pad($this->faker->numberBetween(1, 999999), 6, '0', STR_PAD_LEFT);
+        } while (Cooperative::where('matricule', $matricule)->exists());
+
+        return $matricule;
     }
 
     /**
-     * Générer une adresse réaliste au Maroc
+     * Générer une adresse marocaine
      */
-    private function genererAdresseRealistic(string $ville, string $region): string
+    private function generateAdresse(): string
     {
-        $typesAdresses = [
-            'zones_rurales' => [
-                'Douar {nom}',
-                'Commune Rurale de {nom}',
-                'Village {nom}', 
-                'Fraction {nom}',
-                'Bled {nom}'
-            ],
-            'zones_urbaines' => [
-                'Quartier {nom}',
-                'Secteur {nom}',
-                'Zone Industrielle {nom}',
-                'Avenue {nom}',
-                'Boulevard {nom}'
-            ]
-        ];
+        $ville = $this->faker->randomElement(self::$villes);
+        $quartier = $this->faker->randomElement(self::$quartiers);
+        $numero = $this->faker->numberBetween(1, 999);
+        $rue = $this->faker->randomElement([
+            'Avenue Mohammed V',
+            'Rue Hassan II',
+            'Boulevard Al Massira',
+            'Avenue des FAR',
+            'Rue de la Liberté',
+            'Avenue Al Andalous',
+            'Rue de l\'Independence',
+            'Boulevard Zerktouni',
+            'Avenue Prince Héritier',
+            'Rue Ibn Battuta'
+        ]);
 
-        $nomsLieux = [
-            'Al Baraka', 'Salam', 'Al Houda', 'Nour', 'Al Wifaq', 'Annahda', 'Al Karama',
-            'Oum Rabia', 'Al Majd', 'Al Firdaws', 'Azzaitoune', 'Al Mountada', 'Al Amal',
-            'Hassan II', 'Mohammed V', 'Al Massira', 'Al Qods', 'Al Andalous', 'Al Wahda'
-        ];
-
-        // 70% des coopératives sont en zone rurale, 30% en zone urbaine
-        $typeZone = $this->faker->randomElement(['zones_rurales' => 70, 'zones_urbaines' => 30]);
-        
-        $modeleAdresse = $this->faker->randomElement($typesAdresses[$typeZone]);
-        $nomLieu = $this->faker->randomElement($nomsLieux);
-        $adresseBase = str_replace('{nom}', $nomLieu, $modeleAdresse);
-
-        // Ajouter un numéro si c'est une adresse urbaine
-        if ($typeZone === 'zones_urbaines') {
-            $numero = $this->faker->numberBetween(1, 999);
-            $adresseBase = "{$numero}, {$adresseBase}";
-        }
-
-        return "{$adresseBase}, {$ville}, {$region}";
+        return "{$numero} {$rue}, {$quartier}, {$ville}";
     }
 
     /**
-     * Générer un email professionnel
+     * Générer un numéro de téléphone fixe marocain
      */
-    private function genererEmailProfessionnel(string $nomCooperative): string
+    private function generateTelephone(): string
     {
-        // Extraire des mots clés du nom
-        $mots = explode(' ', strtolower($nomCooperative));
-        $motsCles = [];
-        
-        foreach ($mots as $mot) {
-            if (strlen($mot) > 3 && !in_array($mot, ['coopérative', 'des', 'laitière', 'agro', 'pastorale'])) {
-                $motsCles[] = $this->removeAccents($mot);
-            }
-        }
-
-        // Créer l'email
-        if (count($motsCles) >= 2) {
-            $emailBase = $motsCles[0] . $motsCles[1];
-        } elseif (count($motsCles) === 1) {
-            $emailBase = $motsCles[0] . 'coop';
-        } else {
-            $emailBase = 'cooperative' . rand(100, 999);
-        }
-
-        $domaines = ['@coop-maroc.ma', '@gmail.com', '@yahoo.fr', '@cooperative.ma', '@hotmail.com'];
-        
-        return $emailBase . $this->faker->randomElement($domaines);
-    }
-
-    /**
-     * Générer un téléphone professionnel marocain
-     */
-    private function genererTelephoneProfessionnel(): string
-    {
-        // Préfixes fixes et mobiles marocains
-        $prefixes = [
-            '0528', '0529', '0524', '0525', '0526', '0527', // Fixes
-            '0661', '0662', '0663', '0664', '0665', '0666', // Mobiles professionnels
-            '0671', '0672', '0673', '0674', '0675', '0676'  // Autres mobiles
-        ];
-        
+        $prefixes = ['05', '023', '024', '025', '026', '028', '029'];
         $prefix = $this->faker->randomElement($prefixes);
-        $numero = $this->faker->numerify('######');
         
-        return $prefix . $numero;
+        if ($prefix === '05') {
+            // Mobile
+            $number = $this->faker->numberBetween(10000000, 99999999);
+            return $prefix . $number;
+        } else {
+            // Fixe
+            $number = $this->faker->numberBetween(100000, 999999);
+            return $prefix . $number;
+        }
     }
 
     /**
-     * Supprimer les accents
+     * Générer un email pour coopérative
      */
-    private function removeAccents(string $string): string
+    private function generateEmail(): string
     {
-        $accents = [
-            'à' => 'a', 'á' => 'a', 'â' => 'a', 'ã' => 'a', 'ä' => 'a',
-            'è' => 'e', 'é' => 'e', 'ê' => 'e', 'ë' => 'e',
-            'ì' => 'i', 'í' => 'i', 'î' => 'i', 'ï' => 'i',
-            'ò' => 'o', 'ó' => 'o', 'ô' => 'o', 'õ' => 'o', 'ö' => 'o',
-            'ù' => 'u', 'ú' => 'u', 'û' => 'u', 'ü' => 'u',
-            'ç' => 'c', 'ñ' => 'n'
+        $domains = ['gmail.com', 'hotmail.com', 'yahoo.fr', 'outlook.com'];
+        $domain = $this->faker->randomElement($domains);
+        
+        $baseNames = [
+            'cooperative.lait', 'coop.agricole', 'laiterie', 'elevage',
+            'ferme.lait', 'agri.coop', 'lait.frais', 'cooperative.rurale'
         ];
         
-        return strtr($string, $accents);
+        $baseName = $this->faker->randomElement($baseNames);
+        $number = $this->faker->numberBetween(1, 999);
+        
+        $email = $baseName . $number . '@' . $domain;
+        
+        // Assurer l'unicité
+        $counter = 1;
+        while (Cooperative::where('email', $email)->exists()) {
+            $email = $baseName . $number . $counter . '@' . $domain;
+            $counter++;
+        }
+
+        return $email;
     }
 
     /**
      * État pour une coopérative active
      */
-    public function active(): static
+    public function actif(): static
     {
         return $this->state(fn (array $attributes) => [
             'statut' => 'actif',
@@ -229,7 +169,7 @@ class CooperativeFactory extends Factory
     /**
      * État pour une coopérative inactive
      */
-    public function inactive(): static
+    public function inactif(): static
     {
         return $this->state(fn (array $attributes) => [
             'statut' => 'inactif',
@@ -237,72 +177,54 @@ class CooperativeFactory extends Factory
     }
 
     /**
-     * État pour une grande coopérative (avec responsable défini)
+     * État avec responsable assigné
      */
-    public function avecResponsable(): static
-    {
-        return $this->state(fn (array $attributes) => [
-            'responsable_id' => Utilisateur::factory(),
-        ]);
-    }
-
-    /**
-     * État pour une coopérative récente
-     */
-    public function recente(): static
+    public function withResponsable(): static
     {
         return $this->state(function (array $attributes) {
-            $dateCreation = $this->faker->dateTimeBetween('-6 months', 'now');
-            return [
-                'created_at' => $dateCreation,
-                'updated_at' => $this->faker->dateTimeBetween($dateCreation, 'now'),
-            ];
-        });
-    }
-
-    /**
-     * État pour une coopérative dans une région spécifique
-     */
-    public function dansRegion(string $region): static
-    {
-        return $this->state(function (array $attributes) use ($region) {
-            $regions = [
-                'Casablanca-Settat' => ['Casablanca', 'Settat', 'Berrechid'],
-                'Rabat-Salé-Kénitra' => ['Rabat', 'Kénitra', 'Salé'],
-                'Fès-Meknès' => ['Fès', 'Meknès', 'Taza'],
-                // ... autres régions
-            ];
-
-            if (isset($regions[$region])) {
-                $ville = $this->faker->randomElement($regions[$region]);
-                $adresse = $this->genererAdresseRealistic($ville, $region);
-                
-                return [
-                    'adresse' => $adresse,
-                ];
+            // Créer un gestionnaire ou utiliser un existant
+            $gestionnaire = Utilisateur::where('role', 'gestionnaire')
+                                     ->where('statut', 'actif')
+                                     ->whereDoesntHave('cooperatives')
+                                     ->first();
+            
+            if (!$gestionnaire) {
+                $gestionnaire = Utilisateur::factory()->gestionnaire()->create();
             }
 
-            return [];
+            return [
+                'responsable_id' => $gestionnaire->id_utilisateur,
+                'statut' => 'actif',
+            ];
         });
     }
 
     /**
-     * Configurer avec un responsable spécifique
+     * État pour coopérative dans une région spécifique
      */
-    public function avecResponsableSpecifique(int $idResponsable): static
+    public function inRegion(string $region): static
     {
-        return $this->state(fn (array $attributes) => [
-            'responsable_id' => $idResponsable,
-        ]);
-    }
+        $adressesParRegion = [
+            'Casablanca-Settat' => ['Casablanca', 'Settat', 'Berrechid', 'Mohammedia'],
+            'Rabat-Salé-Kénitra' => ['Rabat', 'Salé', 'Kénitra', 'Temara'],
+            'Fès-Meknès' => ['Fès', 'Meknès', 'Khemisset'],
+            'Marrakech-Safi' => ['Marrakech', 'Safi', 'El Jadida'],
+            'Souss-Massa' => ['Agadir', 'Inezgane'],
+            'Tanger-Tétouan-Al Hoceïma' => ['Tanger', 'Tétouan', 'Larache'],
+        ];
 
-    /**
-     * État pour une coopérative avec email personnalisé
-     */
-    public function avecEmailPersonnalise(string $email): static
-    {
-        return $this->state(fn (array $attributes) => [
-            'email' => $email,
-        ]);
+        return $this->state(function (array $attributes) use ($region, $adressesParRegion) {
+            $villes = $adressesParRegion[$region] ?? self::$villes;
+            $ville = $this->faker->randomElement($villes);
+            $quartier = $this->faker->randomElement(self::$quartiers);
+            $numero = $this->faker->numberBetween(1, 999);
+            $rue = $this->faker->randomElement([
+                'Avenue Mohammed V', 'Rue Hassan II', 'Boulevard Al Massira'
+            ]);
+
+            return [
+                'adresse' => "{$numero} {$rue}, {$quartier}, {$ville}",
+            ];
+        });
     }
 }

@@ -65,9 +65,10 @@ class LivraisonUsine extends Model
     /**
      * Get the paiements for this livraison.
      */
-    public function paiements()
+     public function marquerPayee()
     {
-        return $this->hasMany(PaiementCooperativeUsine::class, 'id_livraison', 'id_livraison');
+        $this->statut = 'payee';
+        return $this->save();
     }
 
     /**
@@ -170,11 +171,7 @@ class LivraisonUsine extends Model
     /**
      * Mark livraison as paid.
      */
-    public function marquerPayee()
-    {
-        $this->statut = 'payee';
-        return $this->save();
-    }
+   
 
     /**
      * Get formatted quantity.
