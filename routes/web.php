@@ -7,6 +7,8 @@ use App\Http\Controllers\Gestionnaire\LivraisonUsineController;
 use App\Http\Controllers\Gestionnaire\PaiementController;
 use App\Http\Controllers\Gestionnaire\PaiementEleveurController;
 use App\Http\Controllers\Direction\CooperativeController as DirectionCooperativeController;
+use App\Http\Controllers\Direction\UtilisateurController as DirectionUtilisateurController;
+use App\Http\Controllers\Direction\DashboardController as DirectionDashboardController;
 
 use App\Http\Controllers\Gestionnaire\StockController;
 
@@ -42,11 +44,6 @@ Route::middleware('auth')->group(function () {
     Route::get('/usva/dashboard', function () {
         return view('usva.dashboard');
     })->name('usva.dashboard');
-
-    // Direction Dashboard
-    Route::get('/direction/dashboard', function () {
-        return view('direction.dashboard');
-    })->name('direction.dashboard');
 
     // Gestionnaire Routes
     Route::prefix('gestionnaire')->name('gestionnaire.')->group(function () {
@@ -95,40 +92,28 @@ Route::middleware('auth')->group(function () {
             Route::delete('/{livraison}', [LivraisonUsineController::class, 'destroy'])->name('destroy');
         });
 
-        // Gestion des Paiements de l'Usine - MODIFIÉ AVEC NOUVELLE ROUTE
+        // Gestion des Paiements de l'Usine
         Route::prefix('paiements')->name('paiements.')->group(function () {
             Route::get('/', [PaiementController::class, 'index'])->name('index');
             Route::post('/calculer-periode', [PaiementController::class, 'calculerPeriode'])->name('calculer-periode');
-            
-            // NOUVELLE ROUTE: Valider toute une période de 15 jours
             Route::post('/valider-periode', [PaiementController::class, 'validerPeriode'])->name('valider-periode');
-            
-            // Route existante pour marquer un paiement individuel comme payé
             Route::put('/{paiement}/marquer-paye', [PaiementController::class, 'marquerPaye'])->name('marquer-paye');
-            
         });
-        // NOUVEAU: Gestion des Paiements aux Éleveurs
+
+        // Gestion des Paiements aux Éleveurs
         Route::prefix('paiements-eleveurs')->name('paiements-eleveurs.')->group(function () {
             Route::get('/', [PaiementEleveurController::class, 'index'])->name('index');
             Route::post('/calculer-quinzaine', [PaiementEleveurController::class, 'calculerQuinzaine'])->name('calculer-quinzaine');
             Route::post('/marquer-paye/{membre}', [PaiementEleveurController::class, 'marquerPaye'])->name('marquer-paye');
             Route::post('/marquer-tous-payes', [PaiementEleveurController::class, 'marquerTousPayes'])->name('marquer-tous-payes');
         });
-
-        
-
     });
 
-});
-Route::middleware('auth')->group(function () {
-    
     // Direction Routes
     Route::prefix('direction')->name('direction.')->group(function () {
         
-        // Dashboard Direction (existant)
-        Route::get('/dashboard', function () {
-            return view('direction.dashboard');
-        })->name('dashboard');
+        // Dashboard Direction avec Controller
+        Route::get('/dashboard', [DirectionDashboardController::class, 'index'])->name('dashboard');
 
         // Gestion des Coopératives
         Route::prefix('cooperatives')->name('cooperatives.')->group(function () {
@@ -145,9 +130,38 @@ Route::middleware('auth')->group(function () {
             Route::patch('/{cooperative}/remove-responsable', [DirectionCooperativeController::class, 'removeResponsable'])->name('remove-responsable');
         });
 
-    });
+        // Gestion des Utilisateurs
+        Route::prefix('utilisateurs')->name('utilisateurs.')->group(function () {
+            Route::get('/', [DirectionUtilisateurController::class, 'index'])->name('index');
+            Route::get('/create', [DirectionUtilisateurController::class, 'create'])->name('create');
+            Route::post('/', [DirectionUtilisateurController::class, 'store'])->name('store');
+            Route::get('/{utilisateur}', [DirectionUtilisateurController::class, 'show'])->name('show');
+            Route::get('/{utilisateur}/edit', [DirectionUtilisateurController::class, 'edit'])->name('edit');
+            Route::put('/{utilisateur}', [DirectionUtilisateurController::class, 'update'])->name('update');
+            
+            // Actions rapides
+            Route::patch('/{utilisateur}/activate', [DirectionUtilisateurController::class, 'activate'])->name('activate');
+            Route::patch('/{utilisateur}/deactivate', [DirectionUtilisateurController::class, 'deactivate'])->name('deactivate');
+            
+            // Gestion des mots de passe
+            Route::get('/{utilisateur}/reset-password', [DirectionUtilisateurController::class, 'showResetPasswordForm'])->name('reset-password');
+            Route::put('/{utilisateur}/reset-password', [DirectionUtilisateurController::class, 'resetPassword'])->name('reset-password.update');
+            
+            // Suppression
+            Route::delete('/{utilisateur}', [DirectionUtilisateurController::class, 'destroy'])->name('destroy');
+            
+            // API pour statistiques
+            Route::get('/api/stats', [DirectionUtilisateurController::class, 'getStats'])->name('api.stats');
+        });
 
+        // Gestion des Listes Éleveurs
+        Route::prefix('eleveurs')->name('eleveurs.')->group(function () {
+            Route::get('/download', [DirectionUtilisateurController::class, 'eleveursDownload'])->name('download');
+            Route::post('/download', [DirectionUtilisateurController::class, 'downloadEleveurs'])->name('download.process');
+        });
+    });
 });
+
 /*
 |--------------------------------------------------------------------------
 | Default Route
