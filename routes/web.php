@@ -67,6 +67,10 @@ Route::middleware('auth')->group(function () {
             Route::patch('/{membre}/deactivate', [MembreEleveurController::class, 'deactivate'])->name('deactivate');
             Route::patch('/{membre}/restore', [MembreEleveurController::class, 'restore'])->name('restore');
             Route::delete('/{membre}', [MembreEleveurController::class, 'destroy'])->name('destroy');
+            
+            // Nouvelles routes pour téléchargements
+            Route::get('/{membre}/download-receptions', [MembreEleveurController::class, 'downloadReceptions'])->name('download-receptions');
+            Route::get('/{membre}/download-paiements', [MembreEleveurController::class, 'downloadPaiements'])->name('download-paiements');
         });
 
         // Gestion des Réceptions de Lait

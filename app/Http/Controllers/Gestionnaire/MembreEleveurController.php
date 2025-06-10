@@ -6,10 +6,12 @@ use App\Http\Controllers\Controller;
 use App\Models\MembreEleveur;
 use App\Models\Cooperative;
 use App\Models\ReceptionLait;
+use App\Models\PaiementCooperativeEleveur;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 class MembreEleveurController extends Controller
 {
@@ -171,7 +173,7 @@ class MembreEleveurController extends Controller
     }
 
     /**
-     * Display the specified membre with detailed information.
+     * Display the specified membre (simplified version).
      */
     public function show(MembreEleveur $membre)
     {
@@ -179,19 +181,7 @@ class MembreEleveurController extends Controller
         
         $membre->load('cooperative');
 
-        // Get reception history with pagination
-        $receptions = ReceptionLait::where('id_membre', $membre->id_membre)
-            ->with('cooperative')
-            ->latest('date_reception')
-            ->paginate(10, ['*'], 'receptions_page');
-
-        // Calculate statistics
-        $stats = $this->calculateMembreStats($membre);
-
-        // Get monthly data for chart (last 12 months)
-        $monthlyData = $this->getMonthlyReceptionData($membre);
-
-        return view('gestionnaire.membres.show', compact('membre', 'receptions', 'stats', 'monthlyData'));
+        return view('gestionnaire.membres.show', compact('membre'));
     }
 
     /**
@@ -339,56 +329,64 @@ class MembreEleveurController extends Controller
     }
 
     /**
-     * Calculate statistics for a membre.
+     * Download membre receptions history as PDF.
      */
-    private function calculateMembreStats(MembreEleveur $membre)
+    public function downloadReceptions(MembreEleveur $membre)
     {
-        return [
-            'total_receptions' => ReceptionLait::where('id_membre', $membre->id_membre)->count(),
-            'total_quantite' => ReceptionLait::where('id_membre', $membre->id_membre)->sum('quantite_litres'),
-            'moyenne_mensuelle' => ReceptionLait::where('id_membre', $membre->id_membre)
-                ->where('date_reception', '>=', now()->subMonths(12))
-                ->avg('quantite_litres'),
-            'derniere_reception' => ReceptionLait::where('id_membre', $membre->id_membre)
-                ->latest('date_reception')
-                ->first()?->date_reception,
+        $this->checkAccess($membre);
+        
+        // Get all receptions for this membre
+        $receptions = ReceptionLait::where('id_membre', $membre->id_membre)
+            ->with('cooperative')
+            ->latest('date_reception')
+            ->get();
+
+        // Calculate statistics
+        $stats = [
+            'total_receptions' => $receptions->count(),
+            'total_quantite' => $receptions->sum('quantite_litres'),
+            'moyenne_quantite' => $receptions->avg('quantite_litres') ?: 0,
+            'premiere_reception' => $receptions->last()?->date_reception,
+            'derniere_reception' => $receptions->first()?->date_reception,
         ];
+
+        // Generate PDF
+        $pdf = Pdf::loadView('gestionnaire.membres.exports.receptions-pdf', compact('membre', 'receptions', 'stats'));
+        
+        $filename = 'Historique_Receptions_' . str_replace(' ', '_', $membre->nom_complet) . '_' . now()->format('Y-m-d') . '.pdf';
+        
+        return $pdf->download($filename);
     }
 
     /**
-     * Get monthly reception data for charts.
+     * Download membre payments history as PDF.
      */
-    private function getMonthlyReceptionData(MembreEleveur $membre)
+    public function downloadPaiements(MembreEleveur $membre)
     {
-        $data = ReceptionLait::where('id_membre', $membre->id_membre)
-            ->where('date_reception', '>=', now()->subMonths(11)->startOfMonth())
-            ->select(
-                DB::raw('YEAR(date_reception) as year'),
-                DB::raw('MONTH(date_reception) as month'),
-                DB::raw('SUM(quantite_litres) as total_quantite'),
-                DB::raw('COUNT(*) as nombre_receptions')
-            )
-            ->groupBy('year', 'month')
-            ->orderBy('year')
-            ->orderBy('month')
+        $this->checkAccess($membre);
+        
+        // Get all payments for this membre
+        $paiements = PaiementCooperativeEleveur::where('id_membre', $membre->id_membre)
+            ->with('cooperative')
+            ->latest('periode_fin')
             ->get();
 
-        // Fill missing months with zeros
-        $monthlyData = [];
-        for ($i = 11; $i >= 0; $i--) {
-            $date = now()->subMonths($i);
-            $year = $date->year;
-            $month = $date->month;
-            
-            $found = $data->where('year', $year)->where('month', $month)->first();
-            
-            $monthlyData[] = [
-                'label' => $date->format('M Y'),
-                'quantite' => $found ? floatval($found->total_quantite) : 0,
-                'receptions' => $found ? $found->nombre_receptions : 0,
-            ];
-        }
+        // Calculate statistics
+        $stats = [
+            'total_paiements' => $paiements->count(),
+            'montant_total_paye' => $paiements->where('statut', 'paye')->sum('montant_total'),
+            'montant_total_en_attente' => $paiements->where('statut', 'calcule')->sum('montant_total'),
+            'quantite_totale' => $paiements->sum('quantite_totale'),
+            'prix_moyen' => $paiements->avg('prix_unitaire') ?: 0,
+            'premier_paiement' => $paiements->last()?->periode_debut,
+            'dernier_paiement' => $paiements->first()?->periode_fin,
+        ];
 
-        return $monthlyData;
+        // Generate PDF
+        $pdf = Pdf::loadView('gestionnaire.membres.exports.paiements-pdf', compact('membre', 'paiements', 'stats'));
+        
+        $filename = 'Historique_Paiements_' . str_replace(' ', '_', $membre->nom_complet) . '_' . now()->format('Y-m-d') . '.pdf';
+        
+        return $pdf->download($filename);
     }
 }

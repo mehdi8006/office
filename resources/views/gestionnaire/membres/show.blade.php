@@ -146,135 +146,85 @@
         </div>
     </div>
 
-    <!-- Right Column - Statistics & History -->
+    <!-- Right Column - Download Options -->
     <div class="col-lg-8">
-        <!-- Statistics Cards -->
-        <div class="row mb-4">
-            <div class="col-md-3 mb-3">
-                <div class="card text-center stats-card h-100">
-                    <div class="card-body">
-                        <i class="fas fa-clipboard-list text-primary mb-2" style="font-size: 2rem;"></i>
-                        <h4 class="mb-1">{{ number_format($stats['total_receptions']) }}</h4>
-                        <small class="text-muted">Total Réceptions</small>
-                    </div>
-                </div>
-            </div>
-
-            <div class="col-md-3 mb-3">
-                <div class="card text-center stats-card h-100">
-                    <div class="card-body">
-                        <i class="fas fa-tint text-info mb-2" style="font-size: 2rem;"></i>
-                        <h4 class="mb-1">{{ number_format($stats['total_quantite'], 1) }}L</h4>
-                        <small class="text-muted">Total Livré</small>
-                    </div>
-                </div>
-            </div>
-
-            <div class="col-md-3 mb-3">
-                <div class="card text-center stats-card h-100">
-                    <div class="card-body">
-                        <i class="fas fa-chart-line text-success mb-2" style="font-size: 2rem;"></i>
-                        <h4 class="mb-1">{{ number_format($stats['moyenne_mensuelle'] ?? 0, 1) }}L</h4>
-                        <small class="text-muted">Moyenne/Réception</small>
-                    </div>
-                </div>
-            </div>
-
-            <div class="col-md-3 mb-3">
-                <div class="card text-center stats-card h-100">
-                    <div class="card-body">
-                        <i class="fas fa-calendar-check text-warning mb-2" style="font-size: 2rem;"></i>
-                        <h4 class="mb-1">
-                            @if($stats['derniere_reception'])
-                                {{ $stats['derniere_reception']->diffForHumans() }}
-                            @else
-                                N/A
-                            @endif
-                        </h4>
-                        <small class="text-muted">Dernière Réception</small>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Monthly Chart -->
+        <!-- Historique des Réceptions Card -->
         <div class="card mb-4">
             <div class="card-header">
-                <h5 class="card-title mb-0">
-                    <i class="fas fa-chart-bar me-2"></i>Évolution des Livraisons (12 derniers mois)
-                </h5>
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-clipboard-list me-2"></i>Historique des Réceptions
+                    </h5>
+                    <a href="{{ route('gestionnaire.membres.download-receptions', $membre) }}" 
+                       class="btn btn-outline-primary">
+                        <i class="fas fa-download me-2"></i>Télécharger l'historique
+                    </a>
+                </div>
             </div>
             <div class="card-body">
-                <canvas id="monthlyChart" height="100"></canvas>
+                <div class="text-center py-4">
+                    <i class="fas fa-file-download text-primary mb-3" style="font-size: 3rem;"></i>
+                    <h6 class="mb-2">Télécharger l'historique complet des réceptions</h6>
+                    <p class="text-muted mb-0">
+                        Obtenez un fichier PDF détaillé contenant toutes les réceptions de lait 
+                        enregistrées pour {{ $membre->nom_complet }}.
+                    </p>
+                    <hr class="my-3">
+                    <div class="row text-center">
+                        <div class="col-4">
+                            <small class="text-muted d-block">Format</small>
+                            <strong>PDF</strong>
+                        </div>
+                        <div class="col-4">
+                            <small class="text-muted d-block">Période</small>
+                            <strong>Complète</strong>
+                        </div>
+                        <div class="col-4">
+                            <small class="text-muted d-block">Tri</small>
+                            <strong>Date desc.</strong>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
 
-        <!-- Reception History -->
+        <!-- Historique des Paiements Card -->
         <div class="card">
             <div class="card-header">
-                <h5 class="card-title mb-0">
-                    <i class="fas fa-history me-2"></i>Historique des Réceptions
-                    <span class="badge bg-primary ms-2">{{ $receptions->total() }} réception(s)</span>
-                </h5>
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-money-bill-wave me-2"></i>Historique des Paiements
+                    </h5>
+                    <a href="{{ route('gestionnaire.membres.download-paiements', $membre) }}" 
+                       class="btn btn-outline-success">
+                        <i class="fas fa-download me-2"></i>Télécharger l'historique
+                    </a>
+                </div>
             </div>
-            <div class="card-body p-0">
-                @if($receptions->count() > 0)
-                    <div class="table-responsive">
-                        <table class="table table-hover mb-0">
-                            <thead class="table-light">
-                                <tr>
-                                    <th>Date</th>
-                                    <th>Matricule</th>
-                                    <th>Quantité</th>
-                                    <th>Coopérative</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @foreach($receptions as $reception)
-                                    <tr>
-                                        <td>
-                                            <div>
-                                                <strong>{{ $reception->date_reception->format('d/m/Y') }}</strong>
-                                                <br>
-                                                <small class="text-muted">{{ $reception->date_reception->format('H:i') }}</small>
-                                            </div>
-                                        </td>
-                                        <td>
-                                            <code>{{ $reception->matricule_reception }}</code>
-                                        </td>
-                                        <td>
-                                            <span class="text-muted">
-                                                {{ number_format($reception->quantite_litres, 2) }} L
-                                            </span>
-                                        </td>
-                                        <td>
-                                            <small>{{ $reception->cooperative->nom_cooperative }}</small>
-                                        </td>
-                                    </tr>
-                                @endforeach
-                            </tbody>
-                        </table>
-                    </div>
-
-                    <!-- Pagination -->
-                    <div class="card-footer">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <div class="text-muted">
-                                Affichage de {{ $receptions->firstItem() }} à {{ $receptions->lastItem() }} 
-                                sur {{ $receptions->total() }} réceptions
-                            </div>
-                            <div>
-                                {{ $receptions->appends(request()->query())->links() }}
-                            </div>
+            <div class="card-body">
+                <div class="text-center py-4">
+                    <i class="fas fa-file-invoice-dollar text-success mb-3" style="font-size: 3rem;"></i>
+                    <h6 class="mb-2">Télécharger l'historique complet des paiements</h6>
+                    <p class="text-muted mb-0">
+                        Obtenez un fichier PDF détaillé contenant tous les paiements effectués 
+                        à {{ $membre->nom_complet }} par périodes.
+                    </p>
+                    <hr class="my-3">
+                    <div class="row text-center">
+                        <div class="col-4">
+                            <small class="text-muted d-block">Format</small>
+                            <strong>PDF</strong>
+                        </div>
+                        <div class="col-4">
+                            <small class="text-muted d-block">Période</small>
+                            <strong>Complète</strong>
+                        </div>
+                        <div class="col-4">
+                            <small class="text-muted d-block">Tri</small>
+                            <strong>Date desc.</strong>
                         </div>
                     </div>
-                @else
-                    <div class="text-center py-5">
-                        <i class="fas fa-clipboard text-muted" style="font-size: 3rem;"></i>
-                        <h5 class="text-muted mt-3">Aucune réception enregistrée</h5>
-                        <p class="text-muted">Ce membre n'a encore effectué aucune livraison de lait.</p>
-                    </div>
-                @endif
+                </div>
             </div>
         </div>
     </div>
@@ -282,83 +232,7 @@
 @endsection
 
 @push('scripts')
-<!-- Chart.js -->
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
 <script>
-// Monthly Chart
-const monthlyData = @json($monthlyData);
-const ctx = document.getElementById('monthlyChart').getContext('2d');
-
-new Chart(ctx, {
-    type: 'bar',
-    data: {
-        labels: monthlyData.map(item => item.label),
-        datasets: [{
-            label: 'Quantité (Litres)',
-            data: monthlyData.map(item => item.quantite),
-            backgroundColor: 'rgba(40, 167, 69, 0.8)',
-            borderColor: 'rgba(40, 167, 69, 1)',
-            borderWidth: 1,
-            borderRadius: 4,
-        }, {
-            label: 'Nombre de réceptions',
-            data: monthlyData.map(item => item.receptions),
-            type: 'line',
-            borderColor: 'rgba(255, 193, 7, 1)',
-            backgroundColor: 'rgba(255, 193, 7, 0.2)',
-            yAxisID: 'y1',
-            tension: 0.4
-        }]
-    },
-    options: {
-        responsive: true,
-        interaction: {
-            mode: 'index',
-            intersect: false,
-        },
-        scales: {
-            y: {
-                type: 'linear',
-                display: true,
-                position: 'left',
-                title: {
-                    display: true,
-                    text: 'Quantité (Litres)'
-                }
-            },
-            y1: {
-                type: 'linear',
-                display: true,
-                position: 'right',
-                title: {
-                    display: true,
-                    text: 'Nombre de réceptions'
-                },
-                grid: {
-                    drawOnChartArea: false,
-                },
-            }
-        },
-        plugins: {
-            legend: {
-                position: 'top',
-            },
-            tooltip: {
-                callbacks: {
-                    label: function(context) {
-                        if (context.datasetIndex === 0) {
-                            return `Quantité: ${context.parsed.y.toFixed(2)} L`;
-                        } else {
-                            return `Réceptions: ${context.parsed.y}`;
-                        }
-                    }
-                }
-            }
-        }
-    }
-});
-
 // Toast notification function
 function showToast(message, type) {
     // Simple toast notification
