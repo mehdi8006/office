@@ -173,6 +173,13 @@
                                 Paiements Usine
                             </a>
                         </li>
+                        <li class="nav-item">
+                            <a class="nav-link {{ request()->routeIs('gestionnaire.paiements-eleveurs.*') ? 'active' : '' }}" 
+                               href="{{ route('gestionnaire.paiements-eleveurs.index') }}">
+                                <i class="fas fa-hand-holding-usd me-2"></i>
+                                Paiements Éleveurs
+                            </a>
+                        </li>
 
                         <hr class="text-white-50">
 

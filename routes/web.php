@@ -5,6 +5,9 @@ use App\Http\Controllers\Gestionnaire\MembreEleveurController;
 use App\Http\Controllers\Gestionnaire\ReceptionController;
 use App\Http\Controllers\Gestionnaire\LivraisonUsineController;
 use App\Http\Controllers\Gestionnaire\PaiementController;
+use App\Http\Controllers\Gestionnaire\PaiementEleveurController;
+use App\Http\Controllers\Direction\CooperativeController as DirectionCooperativeController;
+
 use App\Http\Controllers\Gestionnaire\StockController;
 
 use Illuminate\Support\Facades\Route;
@@ -102,12 +105,49 @@ Route::middleware('auth')->group(function () {
             
             // Route existante pour marquer un paiement individuel comme payé
             Route::put('/{paiement}/marquer-paye', [PaiementController::class, 'marquerPaye'])->name('marquer-paye');
+            
+        });
+        // NOUVEAU: Gestion des Paiements aux Éleveurs
+        Route::prefix('paiements-eleveurs')->name('paiements-eleveurs.')->group(function () {
+            Route::get('/', [PaiementEleveurController::class, 'index'])->name('index');
+            Route::post('/calculer-quinzaine', [PaiementEleveurController::class, 'calculerQuinzaine'])->name('calculer-quinzaine');
+            Route::post('/marquer-paye/{membre}', [PaiementEleveurController::class, 'marquerPaye'])->name('marquer-paye');
+            Route::post('/marquer-tous-payes', [PaiementEleveurController::class, 'marquerTousPayes'])->name('marquer-tous-payes');
+        });
+
+        
+
+    });
+
+});
+Route::middleware('auth')->group(function () {
+    
+    // Direction Routes
+    Route::prefix('direction')->name('direction.')->group(function () {
+        
+        // Dashboard Direction (existant)
+        Route::get('/dashboard', function () {
+            return view('direction.dashboard');
+        })->name('dashboard');
+
+        // Gestion des Coopératives
+        Route::prefix('cooperatives')->name('cooperatives.')->group(function () {
+            Route::get('/', [DirectionCooperativeController::class, 'index'])->name('index');
+            Route::get('/create', [DirectionCooperativeController::class, 'create'])->name('create');
+            Route::post('/', [DirectionCooperativeController::class, 'store'])->name('store');
+            Route::get('/{cooperative}', [DirectionCooperativeController::class, 'show'])->name('show');
+            Route::get('/{cooperative}/edit', [DirectionCooperativeController::class, 'edit'])->name('edit');
+            Route::put('/{cooperative}', [DirectionCooperativeController::class, 'update'])->name('update');
+            
+            // Actions rapides
+            Route::patch('/{cooperative}/activate', [DirectionCooperativeController::class, 'activate'])->name('activate');
+            Route::patch('/{cooperative}/deactivate', [DirectionCooperativeController::class, 'deactivate'])->name('deactivate');
+            Route::patch('/{cooperative}/remove-responsable', [DirectionCooperativeController::class, 'removeResponsable'])->name('remove-responsable');
         });
 
     });
 
 });
-
 /*
 |--------------------------------------------------------------------------
 | Default Route

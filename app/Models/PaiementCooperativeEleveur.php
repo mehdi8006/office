@@ -153,12 +153,7 @@ class PaiementCooperativeEleveur extends Model
     /**
      * Mark payment as paid.
      */
-    public function marquerPaye()
-    {
-        $this->statut = 'paye';
-        $this->date_paiement = now()->toDateString();
-        return $this->save();
-    }
+    
 
     /**
      * Get formatted quantity.
@@ -324,5 +319,14 @@ class PaiementCooperativeEleveur extends Model
                 $paiement->montant_total = $paiement->quantite_totale * $paiement->prix_unitaire;
             }
         });
+    }
+    /**
+     * Mark payment as paid.
+     */
+    public function marquerPaye()
+    {
+        $this->statut = 'paye';
+        $this->date_paiement = now()->toDateString();
+        return $this->save();
     }
 }
