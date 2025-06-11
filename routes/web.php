@@ -95,6 +95,7 @@ Route::middleware('auth')->group(function () {
             Route::put('/{livraison}', [LivraisonUsineController::class, 'update'])->name('update'); // NOUVELLE ROUTE
             Route::put('/{livraison}/validate', [LivraisonUsineController::class, 'validate'])->name('validate');
             Route::delete('/{livraison}', [LivraisonUsineController::class, 'destroy'])->name('destroy');
+            Route::get('/download-livraisons-validees', [LivraisonUsineController::class, 'downloadLivraisonsValidees'])->name('download-livraisons-validees');
         });
 
         // Gestion des Paiements de l'Usine
@@ -113,6 +114,15 @@ Route::middleware('auth')->group(function () {
             Route::post('/marquer-tous-payes', [PaiementEleveurController::class, 'marquerTousPayes'])->name('marquer-tous-payes');
         });
     });
+
+
+
+
+
+
+
+
+
 
     // Direction Routes
     Route::prefix('direction')->name('direction.')->group(function () {
