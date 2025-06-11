@@ -92,6 +92,7 @@ Route::middleware('auth')->group(function () {
             Route::get('/', [LivraisonUsineController::class, 'index'])->name('index');
             Route::get('/create', [LivraisonUsineController::class, 'create'])->name('create');
             Route::post('/', [LivraisonUsineController::class, 'store'])->name('store');
+            Route::put('/{livraison}', [LivraisonUsineController::class, 'update'])->name('update'); // NOUVELLE ROUTE
             Route::put('/{livraison}/validate', [LivraisonUsineController::class, 'validate'])->name('validate');
             Route::delete('/{livraison}', [LivraisonUsineController::class, 'destroy'])->name('destroy');
         });

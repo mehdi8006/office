@@ -300,6 +300,20 @@ class StockLait extends Model
     }
 
     /**
+     * Cancel a reservation (planned delivery) - restore available stock.
+     * Différent de annulerLivraison() car pas de vérification sur quantite_livree.
+     * NOUVELLE MÉTHODE AJOUTÉE
+     */
+    public function annulerReservation($quantite)
+    {
+        return DB::transaction(function () use ($quantite) {
+            $this->decrement('quantite_livree', $quantite);
+            $this->increment('quantite_disponible', $quantite);
+            return true;
+        });
+    }
+
+    /**
      * Check if there's available stock.
      */
     public function hasAvailableStock()
