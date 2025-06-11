@@ -460,100 +460,100 @@ class LivraisonUsineController extends Controller
     /**
  * Download validated livraisons as PDF.
  */
-public function downloadLivraisonsValidees(Request $request)
-{
-    $cooperativeId = $this->getCurrentCooperativeId();
-    $cooperative = $this->getCurrentCooperative();
-    
-    $validated = $request->validate([
-        'date_debut' => 'required|date',
-        'date_fin' => 'required|date|after_or_equal:date_debut',
-        'inclure_details' => 'sometimes|boolean'
-    ], [
-        'date_debut.required' => 'La date de début est requise',
-        'date_fin.required' => 'La date de fin est requise',
-        'date_fin.after_or_equal' => 'La date de fin doit être postérieure ou égale à la date de début',
-    ]);
 
-    try {
-        $dateDebut = Carbon::parse($validated['date_debut']);
-        $dateFin = Carbon::parse($validated['date_fin']);
-        $inclureDetails = $request->has('inclure_details');
+/**
+     * Download validated livraisons as PDF.
+     */
+    public function downloadLivraisonsValidees(Request $request)
+    {
+        $cooperativeId = $this->getCurrentCooperativeId();
+        $cooperative = $this->getCurrentCooperative();
+        
+        $validated = $request->validate([
+            'date_debut' => 'required|date',
+            'date_fin' => 'required|date|after_or_equal:date_debut',
+            'inclure_details' => 'sometimes|boolean'
+        ], [
+            'date_debut.required' => 'La date de début est requise',
+            'date_fin.required' => 'La date de fin est requise',
+            'date_fin.after_or_equal' => 'La date de fin doit être postérieure ou égale à la date de début',
+        ]);
 
-        // Get validated livraisons for the period
-        $livraisons = LivraisonUsine::where('id_cooperative', $cooperativeId)
-            ->where('statut', 'validee')
-            ->whereBetween('date_livraison', [$dateDebut, $dateFin])
-            ->orderBy('date_livraison', 'desc')
-            ->orderBy('created_at', 'desc')
-            ->get();
+        try {
+            $dateDebut = Carbon::parse($validated['date_debut']);
+            $dateFin = Carbon::parse($validated['date_fin']);
+            $inclureDetails = $request->has('inclure_details');
 
-        if ($livraisons->isEmpty()) {
+            // Get validated livraisons for the period
+            $livraisons = LivraisonUsine::where('id_cooperative', $cooperativeId)
+                ->where('statut', 'validee')
+                ->whereBetween('date_livraison', [$dateDebut, $dateFin])
+                ->orderBy('date_livraison', 'desc')
+                ->orderBy('created_at', 'desc')
+                ->get();
+
+            if ($livraisons->isEmpty()) {
+                return redirect()
+                    ->back()
+                    ->with('error', 'Aucune livraison validée trouvée pour la période sélectionnée.');
+            }
+
+            // Calculate statistics (without montant)
+            $stats = [
+                'periode_debut' => $dateDebut,
+                'periode_fin' => $dateFin,
+                'total_livraisons' => $livraisons->count(),
+                'total_quantite' => $livraisons->sum('quantite_litres'),
+                'quantite_moyenne' => $livraisons->avg('quantite_litres') ?: 0,
+                'premiere_livraison' => $livraisons->last()?->date_livraison,
+                'derniere_livraison' => $livraisons->first()?->date_livraison,
+                // SUPPRIMÉ: 'total_montant' => $livraisons->sum(...)
+            ];
+
+            // Group by date for summary if not including details (without montant)
+            if (!$inclureDetails) {
+                $livraisonsGroupees = $livraisons->groupBy(function($livraison) {
+                    return $livraison->date_livraison->format('Y-m-d');
+                })->map(function($group, $date) {
+                    return [
+                        'date' => Carbon::parse($date),
+                        'nombre_livraisons' => $group->count(),
+                        'quantite_totale' => $group->sum('quantite_litres'),
+                        // SUPPRIMÉ: 'montant_total' => $group->sum(...)
+                    ];
+                });
+            } else {
+                $livraisonsGroupees = null;
+            }
+
+            // Generate PDF
+            $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('gestionnaire.livraisons.exports.livraisons-validees-pdf', compact(
+                'cooperative', 
+                'livraisons', 
+                'stats', 
+                'inclureDetails',
+                'livraisonsGroupees'
+            ));
+            
+            // Set paper size and orientation
+            $pdf->setPaper('A4', 'portrait');
+            
+            // Generate filename
+            $filename = sprintf(
+                'Livraisons_Validees_%s_%s_%s.pdf',
+                str_replace(' ', '_', $cooperative->nom_cooperative),
+                $dateDebut->format('Y-m-d'),
+                $dateFin->format('Y-m-d')
+            );
+            
+            return $pdf->download($filename);
+            
+        } catch (\Exception $e) {
+            \Log::error("Erreur lors de la génération du PDF des livraisons: " . $e->getMessage());
+            
             return redirect()
                 ->back()
-                ->with('error', 'Aucune livraison validée trouvée pour la période sélectionnée.');
+                ->with('error', 'Erreur lors de la génération du PDF: ' . $e->getMessage());
         }
-
-        // Calculate statistics
-        $stats = [
-            'periode_debut' => $dateDebut,
-            'periode_fin' => $dateFin,
-            'total_livraisons' => $livraisons->count(),
-            'total_quantite' => $livraisons->sum('quantite_litres'),
-            'quantite_moyenne' => $livraisons->avg('quantite_litres') ?: 0,
-            'premiere_livraison' => $livraisons->last()?->date_livraison,
-            'derniere_livraison' => $livraisons->first()?->date_livraison,
-            'total_montant' => $livraisons->sum(function($livraison) {
-                return $livraison->quantite_litres * 3.50; // Prix unitaire fixe
-            }),
-        ];
-
-        // Group by date for summary if not including details
-        if (!$inclureDetails) {
-            $livraisonsGroupees = $livraisons->groupBy(function($livraison) {
-                return $livraison->date_livraison->format('Y-m-d');
-            })->map(function($group, $date) {
-                return [
-                    'date' => Carbon::parse($date),
-                    'nombre_livraisons' => $group->count(),
-                    'quantite_totale' => $group->sum('quantite_litres'),
-                    'montant_total' => $group->sum(function($livraison) {
-                        return $livraison->quantite_litres * 3.50;
-                    })
-                ];
-            });
-        } else {
-            $livraisonsGroupees = null;
-        }
-
-        // Generate PDF
-        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('gestionnaire.livraisons.exports.livraisons-validees-pdf', compact(
-            'cooperative', 
-            'livraisons', 
-            'stats', 
-            'inclureDetails',
-            'livraisonsGroupees'
-        ));
-        
-        // Set paper size and orientation
-        $pdf->setPaper('A4', 'portrait');
-        
-        // Generate filename
-        $filename = sprintf(
-            'Livraisons_Validees_%s_%s_%s.pdf',
-            str_replace(' ', '_', $cooperative->nom_cooperative),
-            $dateDebut->format('Y-m-d'),
-            $dateFin->format('Y-m-d')
-        );
-        
-        return $pdf->download($filename);
-        
-    } catch (\Exception $e) {
-        \Log::error("Erreur lors de la génération du PDF des livraisons: " . $e->getMessage());
-        
-        return redirect()
-            ->back()
-            ->with('error', 'Erreur lors de la génération du PDF: ' . $e->getMessage());
     }
-}
 }

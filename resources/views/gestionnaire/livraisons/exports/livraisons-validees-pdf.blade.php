@@ -112,7 +112,7 @@
         
         .stat-card {
             display: table-cell;
-            width: 25%;
+            width: 33.33%;
             text-align: center;
             background: #fff;
             border: 1px solid #dee2e6;
@@ -220,7 +220,7 @@
         
         .summary-item {
             display: table-cell;
-            width: 33.33%;
+            width: 50%;
             text-align: center;
             padding: 10px;
         }
@@ -330,10 +330,6 @@
                 <div class="stat-value">{{ number_format($stats['quantite_moyenne'], 2) }} L</div>
                 <div class="stat-label">Quantité Moyenne</div>
             </div>
-            <div class="stat-card">
-                <div class="stat-value">{{ number_format($stats['total_montant'], 2) }} DH</div>
-                <div class="stat-label">Montant Total</div>
-            </div>
         </div>
 
         @if($inclureDetails)
@@ -345,11 +341,10 @@
             <table>
                 <thead>
                     <tr>
-                        <th width="15%">Date Livraison</th>
-                        <th width="15%">Quantité (L)</th>
-                        <th width="15%">Montant (DH)</th>
-                        <th width="20%">Date Validation</th>
-                        <th width="35%">Observations</th>
+                        <th width="25%">Date Livraison</th>
+                        <th width="25%">Quantité (L)</th>
+                        <th width="25%">Date Validation</th>
+                        <th width="25%">Statut</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -357,9 +352,8 @@
                         <tr>
                             <td class="text-center">{{ $livraison->date_livraison->format('d/m/Y') }}</td>
                             <td class="text-right">{{ number_format($livraison->quantite_litres, 2) }}</td>
-                            <td class="text-right">{{ number_format($livraison->quantite_litres * 3.50, 2) }}</td>
                             <td class="text-center">{{ $livraison->updated_at->format('d/m/Y H:i') }}</td>
-                            <td class="text-center text-success">Livraison validée</td>
+                            <td class="text-center text-success">Validée</td>
                         </tr>
                     @endforeach
                 </tbody>
@@ -373,10 +367,9 @@
             <table>
                 <thead>
                     <tr>
-                        <th width="25%">Date</th>
-                        <th width="20%">Nb Livraisons</th>
-                        <th width="25%">Quantité Totale (L)</th>
-                        <th width="30%">Montant Total (DH)</th>
+                        <th width="40%">Date</th>
+                        <th width="30%">Nb Livraisons</th>
+                        <th width="30%">Quantité Totale (L)</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -385,7 +378,6 @@
                             <td class="text-center">{{ $groupe['date']->format('d/m/Y') }}</td>
                             <td class="text-center">{{ $groupe['nombre_livraisons'] }}</td>
                             <td class="text-right">{{ number_format($groupe['quantite_totale'], 2) }}</td>
-                            <td class="text-right">{{ number_format($groupe['montant_total'], 2) }}</td>
                         </tr>
                     @endforeach
                 </tbody>
@@ -403,10 +395,6 @@
                 <div class="summary-item">
                     <div class="summary-item-value">{{ number_format($stats['total_quantite'], 2) }} L</div>
                     <div class="summary-item-label">Total Quantité</div>
-                </div>
-                <div class="summary-item">
-                    <div class="summary-item-value">{{ number_format($stats['total_montant'], 2) }} DH</div>
-                    <div class="summary-item-label">Total Montant</div>
                 </div>
             </div>
             

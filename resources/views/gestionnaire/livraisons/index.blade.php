@@ -5,12 +5,6 @@
 
 @section('page-actions')
     <div class="btn-group">
-        <button type="button" 
-                class="btn btn-outline-info" 
-                data-bs-toggle="modal" 
-                data-bs-target="#downloadModal">
-            <i class="fas fa-download me-2"></i>Télécharger PDF
-        </button>
         <a href="{{ route('gestionnaire.livraisons.create') }}" class="btn btn-success">
             <i class="fas fa-plus me-2"></i>Nouvelle Livraison
         </a>
@@ -18,51 +12,6 @@
 @endsection
 
 @section('content')
-<!-- Summary Card for Validated Deliveries -->
-@php
-    $livraisonsValidees = \App\Models\LivraisonUsine::where('id_cooperative', $cooperative->id_cooperative)
-        ->where('statut', 'validee')
-        ->whereBetween('date_livraison', [now()->subDays(30), now()])
-        ->get();
-    $totalQuantiteValidee = $livraisonsValidees->sum('quantite_litres');
-    $nombreLivraisonsValidees = $livraisonsValidees->count();
-@endphp
-
-@if($nombreLivraisonsValidees > 0)
-<div class="row mb-4">
-    <div class="col-md-6">
-        <div class="card bg-success text-white">
-            <div class="card-body">
-                <div class="d-flex justify-content-between">
-                    <div>
-                        <h4 class="mb-1">{{ number_format($totalQuantiteValidee, 2) }} L</h4>
-                        <p class="mb-0">Livraisons validées (30 derniers jours)</p>
-                    </div>
-                    <div>
-                        <i class="fas fa-check-circle fa-2x"></i>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-6">
-        <div class="card bg-info text-white">
-            <div class="card-body">
-                <div class="d-flex justify-content-between">
-                    <div>
-                        <h4 class="mb-1">{{ $nombreLivraisonsValidees }}</h4>
-                        <p class="mb-0">Nombre de livraisons validées</p>
-                    </div>
-                    <div>
-                        <i class="fas fa-truck fa-2x"></i>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-@endif
-
 <!-- Livraisons Planifiées Table -->
 <div class="card">
     <div class="card-header">
@@ -213,86 +162,85 @@
     </div>
 </div>
 
-<!-- Modal de téléchargement PDF -->
-<div class="modal fade" id="downloadModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">
-                    <i class="fas fa-download me-2"></i>Télécharger PDF des Livraisons Validées
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <form action="{{ route('gestionnaire.livraisons.download-livraisons-validees') }}" method="GET">
-                <div class="modal-body">
-                    <div class="alert alert-info">
-                        <i class="fas fa-info-circle me-2"></i>
-                        Sélectionnez la période pour télécharger le rapport des livraisons validées.
+<!-- Section Historique des Livraisons -->
+<div class="card mt-4">
+    <div class="card-header">
+        <h5 class="card-title mb-0">
+            <i class="fas fa-history me-2"></i>Historique des Livraisons Validées
+        </h5>
+    </div>
+    <div class="card-body">
+        <form action="{{ route('gestionnaire.livraisons.download-livraisons-validees') }}" method="GET" id="historiqueForm">
+            <!-- Champs cachés pour les dates -->
+            <input type="hidden" name="date_debut" id="date_debut_hidden">
+            <input type="hidden" name="date_fin" id="date_fin_hidden">
+            
+            <div class="row align-items-end">
+                <div class="col-md-3">
+                    <div class="mb-3">
+                        <label for="mois_historique" class="form-label">
+                            <i class="fas fa-calendar-alt me-1"></i>Mois
+                        </label>
+                        <select class="form-select" id="mois_historique" required>
+                            <option value="">Sélectionner un mois</option>
+                            <option value="1" {{ now()->month == 1 ? 'selected' : '' }}>Janvier</option>
+                            <option value="2" {{ now()->month == 2 ? 'selected' : '' }}>Février</option>
+                            <option value="3" {{ now()->month == 3 ? 'selected' : '' }}>Mars</option>
+                            <option value="4" {{ now()->month == 4 ? 'selected' : '' }}>Avril</option>
+                            <option value="5" {{ now()->month == 5 ? 'selected' : '' }}>Mai</option>
+                            <option value="6" {{ now()->month == 6 ? 'selected' : '' }}>Juin</option>
+                            <option value="7" {{ now()->month == 7 ? 'selected' : '' }}>Juillet</option>
+                            <option value="8" {{ now()->month == 8 ? 'selected' : '' }}>Août</option>
+                            <option value="9" {{ now()->month == 9 ? 'selected' : '' }}>Septembre</option>
+                            <option value="10" {{ now()->month == 10 ? 'selected' : '' }}>Octobre</option>
+                            <option value="11" {{ now()->month == 11 ? 'selected' : '' }}>Novembre</option>
+                            <option value="12" {{ now()->month == 12 ? 'selected' : '' }}>Décembre</option>
+                        </select>
                     </div>
-                    
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label for="date_debut" class="form-label">Date de début</label>
-                                <input type="date" 
-                                       class="form-control" 
-                                       id="date_debut"
-                                       name="date_debut" 
-                                       value="{{ now()->subDays(30)->format('Y-m-d') }}" 
-                                       required>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label for="date_fin" class="form-label">Date de fin</label>
-                                <input type="date" 
-                                       class="form-control" 
-                                       id="date_fin"
-                                       name="date_fin" 
-                                       value="{{ now()->format('Y-m-d') }}" 
-                                       required>
-                            </div>
-                        </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="mb-3">
+                        <label for="annee_historique" class="form-label">
+                            <i class="fas fa-calendar me-1"></i>Année
+                        </label>
+                        <select class="form-select" id="annee_historique" required>
+                            <option value="">Sélectionner une année</option>
+                            @for($year = now()->year; $year >= now()->year - 5; $year--)
+                                <option value="{{ $year }}" {{ $year == now()->year ? 'selected' : '' }}>{{ $year }}</option>
+                            @endfor
+                        </select>
                     </div>
-
+                </div>
+                <div class="col-md-3">
                     <div class="mb-3">
                         <div class="form-check">
                             <input class="form-check-input" 
                                    type="checkbox" 
-                                   id="inclure_details" 
+                                   id="inclure_details_historique" 
                                    name="inclure_details" 
                                    value="1" 
                                    checked>
-                            <label class="form-check-label" for="inclure_details">
-                                Inclure les détails par livraison
+                            <label class="form-check-label" for="inclure_details_historique">
+                                Inclure les détails
                             </label>
                         </div>
                     </div>
-
-                    <!-- Aperçu des données -->
-                    <div class="bg-light p-3 rounded">
-                        <h6 class="mb-2">Aperçu (30 derniers jours):</h6>
-                        <div class="row text-center">
-                            <div class="col-6">
-                                <strong>{{ $nombreLivraisonsValidees }}</strong>
-                                <br>
-                                <small class="text-muted">Livraisons</small>
-                            </div>
-                            <div class="col-6">
-                                <strong>{{ number_format($totalQuantiteValidee, 2) }} L</strong>
-                                <br>
-                                <small class="text-muted">Total Quantité</small>
-                            </div>
-                        </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="mb-3">
+                        <button type="submit" class="btn btn-info w-100">
+                            <i class="fas fa-download me-2"></i>Télécharger PDF
+                        </button>
                     </div>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
-                    <button type="submit" class="btn btn-info">
-                        <i class="fas fa-file-pdf me-2"></i>Télécharger PDF
-                    </button>
-                </div>
-            </form>
+            </div>
+        </form>
+
+        <div class="mt-3">
+            <small class="text-muted">
+                <i class="fas fa-info-circle me-1"></i>
+                Ce rapport contient toutes les livraisons validées pour le mois sélectionné.
+            </small>
         </div>
     </div>
 </div>
@@ -301,44 +249,71 @@
 @push('scripts')
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Validation des dates dans le modal
-    const dateDebut = document.getElementById('date_debut');
-    const dateFin = document.getElementById('date_fin');
-
-    function validateDates() {
-        if (dateDebut.value && dateFin.value) {
-            if (dateDebut.value > dateFin.value) {
-                dateFin.setCustomValidity('La date de fin doit être postérieure à la date de début');
-            } else {
-                dateFin.setCustomValidity('');
-            }
+    const moisSelect = document.getElementById('mois_historique');
+    const anneeSelect = document.getElementById('annee_historique');
+    const dateDebutInput = document.getElementById('date_debut_hidden');
+    const dateFinInput = document.getElementById('date_fin_hidden');
+    const form = document.getElementById('historiqueForm');
+    
+    // Fonction pour calculer les dates de début et fin du mois sélectionné
+    function updateDatesFromMonthYear() {
+        const mois = moisSelect.value;
+        const annee = anneeSelect.value;
+        
+        if (mois && annee) {
+            // Premier jour du mois
+            const dateDebut = new Date(annee, mois - 1, 1);
+            // Dernier jour du mois
+            const dateFin = new Date(annee, mois, 0);
+            
+            // Mettre à jour les champs cachés
+            dateDebutInput.value = dateDebut.toISOString().split('T')[0];
+            dateFinInput.value = dateFin.toISOString().split('T')[0];
+            
+            console.log('Dates mises à jour:', {
+                mois: mois,
+                annee: annee,
+                date_debut: dateDebutInput.value,
+                date_fin: dateFinInput.value
+            });
+        } else {
+            dateDebutInput.value = '';
+            dateFinInput.value = '';
         }
     }
-
-    dateDebut.addEventListener('change', validateDates);
-    dateFin.addEventListener('change', validateDates);
-
-    // Pré-remplir avec des raccourcis
-    document.querySelectorAll('[data-period]').forEach(function(btn) {
-        btn.addEventListener('click', function() {
-            const period = this.dataset.period;
-            const today = new Date();
-            
-            switch(period) {
-                case 'week':
-                    dateDebut.value = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-                    break;
-                case 'month':
-                    dateDebut.value = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
-                    break;
-                case 'quarter':
-                    const quarterStart = new Date(today.getFullYear(), Math.floor(today.getMonth() / 3) * 3, 1);
-                    dateDebut.value = quarterStart.toISOString().split('T')[0];
-                    break;
-            }
-            dateFin.value = today.toISOString().split('T')[0];
-            validateDates();
+    
+    // Mettre à jour les dates quand le mois ou l'année change
+    moisSelect.addEventListener('change', updateDatesFromMonthYear);
+    anneeSelect.addEventListener('change', updateDatesFromMonthYear);
+    
+    // Initialiser les dates au chargement de la page
+    updateDatesFromMonthYear();
+    
+    // Validation du formulaire avant soumission
+    form.addEventListener('submit', function(e) {
+        const mois = moisSelect.value;
+        const annee = anneeSelect.value;
+        
+        if (!mois || !annee) {
+            e.preventDefault();
+            alert('Veuillez sélectionner un mois et une année.');
+            return false;
+        }
+        
+        // Vérifier que les dates cachées sont bien remplies
+        if (!dateDebutInput.value || !dateFinInput.value) {
+            e.preventDefault();
+            alert('Erreur: les dates ne sont pas correctement calculées. Veuillez réessayer.');
+            return false;
+        }
+        
+        console.log('Formulaire soumis avec:', {
+            date_debut: dateDebutInput.value,
+            date_fin: dateFinInput.value,
+            inclure_details: document.getElementById('inclure_details_historique').checked
         });
+        
+        return true;
     });
 });
 </script>
