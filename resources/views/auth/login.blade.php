@@ -15,12 +15,8 @@
     <style>
         body {
             font-family: 'Inter', sans-serif;
-            background: linear-gradient(rgba(170, 170, 170, 0.5), rgba(170, 170, 170, 0.5)),
-                        url('{{ asset('image/background.jpg') }}');
-            background-size: cover;
-            background-position: center;
-            background-repeat: no-repeat;
-            background-attachment: fixed;
+            background: whitesmoke;
+            
             height: 100vh;
             overflow-x: hidden;
         }
@@ -167,14 +163,15 @@
         <div class="login-container p-4">
             <!-- Logo Section -->
             <div class="text-center mb-4">
-                <div class="logo-section mb-3">
-                    <div class="logo-icon">
-                        <i class="fas fa-seedling"></i>
-                    </div>
-                    <h1 class="h2 fw-bold text-dark mb-0">SGCCL</h1>
-                </div>
-                <p class="text-muted mb-0">Connectez-vous à votre compte</p>
-            </div>
+    <div class="logo-section mb-3">
+        <div class="logo-icon">
+            <img src="{{ asset('image/bg.jpg') }}" alt="Logo" style="width: 100px; height: 60px; border-radius: 50%;">
+        </div>
+        <h1 class="h2 fw-bold text-dark mb-0">SGCCL</h1>
+    </div>
+    <p class="text-muted mb-0">Connectez-vous à votre compte</p>
+</div>
+
 
                     <!-- Success Message -->
                     @if(session('success'))
@@ -244,20 +241,7 @@
                             </div>
                         </div>
 
-                        <!-- Remember Me & Forgot Password -->
-                        <div class="mb-4 d-flex justify-content-between align-items-center">
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox" id="remember" name="remember">
-                                <label class="form-check-label text-muted" for="remember" style="font-size: 0.85rem;">
-                                    Se souvenir de moi
-                                </label>
-                            </div>
-                            <div>
-                                <a href="#" class="text-success text-decoration-none" style="font-size: 0.85rem;">
-                                    Mot de passe oublié ?
-                                </a>
-                            </div>
-                        </div>
+                        
 
                         <!-- Login Button -->
                         <div class="d-grid">
