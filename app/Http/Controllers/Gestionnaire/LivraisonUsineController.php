@@ -9,6 +9,8 @@ use App\Models\PaiementCooperativeUsine;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+
 use Carbon\Carbon;
 
 class LivraisonUsineController extends Controller
@@ -115,7 +117,7 @@ class LivraisonUsineController extends Controller
             return view('gestionnaire.livraisons.create', compact('stockTotalCooperative', 'cooperative'));
 
         } catch (\Exception $e) {
-            \Log::error("Erreur lors de la création de livraison: " . $e->getMessage());
+            Log::error("Erreur lors de la création de livraison: " . $e->getMessage());
             
             return redirect()
                 ->route('gestionnaire.stock.index')
@@ -200,7 +202,7 @@ class LivraisonUsineController extends Controller
                 
         } catch (\Exception $e) {
             DB::rollBack();
-            \Log::error("Erreur lors de la création de livraison: " . $e->getMessage());
+            Log::error("Erreur lors de la création de livraison: " . $e->getMessage());
             
             return back()
                 ->withInput()
@@ -287,7 +289,7 @@ class LivraisonUsineController extends Controller
                 
         } catch (\Exception $e) {
             DB::rollBack();
-            \Log::error("Erreur lors de la modification de livraison: " . $e->getMessage());
+            Log::error("Erreur lors de la modification de livraison: " . $e->getMessage());
             
             return back()
                 ->withInput()
@@ -450,7 +452,7 @@ class LivraisonUsineController extends Controller
                 
         } catch (\Exception $e) {
             DB::rollBack();
-            \Log::error("Erreur lors de la suppression de livraison: " . $e->getMessage());
+            Log::error("Erreur lors de la suppression de livraison: " . $e->getMessage());
             
             return redirect()
                 ->back()
@@ -549,7 +551,7 @@ class LivraisonUsineController extends Controller
             return $pdf->download($filename);
             
         } catch (\Exception $e) {
-            \Log::error("Erreur lors de la génération du PDF des livraisons: " . $e->getMessage());
+            Log::error("Erreur lors de la génération du PDF des livraisons: " . $e->getMessage());
             
             return redirect()
                 ->back()

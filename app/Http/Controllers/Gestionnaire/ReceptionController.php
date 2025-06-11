@@ -181,7 +181,7 @@ class ReceptionController extends Controller
                 
         } catch (\Exception $e) {
             DB::rollBack();
-            \Log::error("Erreur lors de l'enregistrement de la réception: " . $e->getMessage());
+            Log::error("Erreur lors de l'enregistrement de la réception: " . $e->getMessage());
             
             return back()
                 ->withInput()
@@ -338,7 +338,7 @@ class ReceptionController extends Controller
                 
         } catch (\Exception $e) {
             DB::rollBack();
-            \Log::error("Erreur lors de la modification de la réception: " . $e->getMessage());
+            Log::error("Erreur lors de la modification de la réception: " . $e->getMessage());
             
             return back()
                 ->withInput()
