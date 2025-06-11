@@ -48,19 +48,7 @@
                 </div>
             </div>
         </div>
-        <div class="col-lg-4 col-md-6 mb-4">
-            <div class="card border-success h-100">
-                <div class="card-body text-center d-flex flex-column">
-                    <i class="fas fa-download fa-3x text-success mb-3"></i>
-                    <h4>Listes Éleveurs</h4>
-                    <p class="text-muted flex-grow-1">Télécharger les listes des membres éleveurs</p>
-                    <a href="{{ route('direction.eleveurs.download') }}" class="btn btn-success btn-lg">
-                        <i class="fas fa-download me-2"></i>
-                        Télécharger
-                    </a>
-                </div>
-            </div>
-        </div>
+       
     </div>
 </div>
 @endsection

@@ -236,18 +236,13 @@
                                     </span>
                                 </li>
                                 <li><hr class="dropdown-divider"></li>
-                                <li>
-                                    <a class="dropdown-item" href="#">
+                                 <li>
+                                    <a class="dropdown-item" href="{{ route('direction.utilisateurs.show', auth()->user()) }}">
                                         <i class="fas fa-user me-2"></i>
                                         Mon profil
                                     </a>
                                 </li>
-                                <li>
-                                    <a class="dropdown-item" href="#">
-                                        <i class="fas fa-cog me-2"></i>
-                                        Paramètres
-                                    </a>
-                                </li>
+                               
                                 <li><hr class="dropdown-divider"></li>
                                 <li>
                                     <form action="{{ route('logout') }}" method="POST">
