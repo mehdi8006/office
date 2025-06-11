@@ -73,14 +73,14 @@ Route::middleware('auth')->group(function () {
             Route::get('/{membre}/download-paiements', [MembreEleveurController::class, 'downloadPaiements'])->name('download-paiements');
         });
 
-        // Gestion des Réceptions de Lait
+       // Gestion des Réceptions de Lait
         Route::prefix('receptions')->name('receptions.')->group(function () {
             Route::get('/', [ReceptionController::class, 'index'])->name('index');
             Route::get('/create', [ReceptionController::class, 'create'])->name('create');
             Route::post('/', [ReceptionController::class, 'store'])->name('store');
+            Route::patch('/{reception}', [ReceptionController::class, 'update'])->name('update'); // Nouvelle route
             Route::delete('/{reception}', [ReceptionController::class, 'destroy'])->name('destroy');
         });
-
         // Gestion du Stock
         Route::prefix('stock')->name('stock.')->group(function () {
             Route::get('/', [StockController::class, 'index'])->name('index');
