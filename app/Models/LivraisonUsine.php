@@ -32,8 +32,6 @@ class LivraisonUsine extends Model
         'id_cooperative',
         'date_livraison',
         'quantite_litres',
-        'prix_unitaire',
-        'montant_total',
         'statut',
     ];
 
@@ -47,8 +45,6 @@ class LivraisonUsine extends Model
         return [
             'date_livraison' => 'date',
             'quantite_litres' => 'decimal:2',
-            'prix_unitaire' => 'decimal:2',
-            'montant_total' => 'decimal:2',
             'created_at' => 'datetime',
             'updated_at' => 'datetime',
         ];
@@ -60,15 +56,6 @@ class LivraisonUsine extends Model
     public function cooperative()
     {
         return $this->belongsTo(Cooperative::class, 'id_cooperative', 'id_cooperative');
-    }
-
-    /**
-     * Get the paiements for this livraison.
-     */
-     public function marquerPayee()
-    {
-        $this->statut = 'payee';
-        return $this->save();
     }
 
     /**
@@ -120,14 +107,6 @@ class LivraisonUsine extends Model
     }
 
     /**
-     * Scope a query to get paid deliveries.
-     */
-    public function scopePayee($query)
-    {
-        return $query->where('statut', 'payee');
-    }
-
-    /**
      * Scope to order by date (most recent first).
      */
     public function scopeLatest($query)
@@ -152,14 +131,6 @@ class LivraisonUsine extends Model
     }
 
     /**
-     * Check if livraison is paid.
-     */
-    public function isPayee()
-    {
-        return $this->statut === 'payee';
-    }
-
-    /**
      * Validate the livraison.
      */
     public function valider()
@@ -167,11 +138,6 @@ class LivraisonUsine extends Model
         $this->statut = 'validee';
         return $this->save();
     }
-
-    /**
-     * Mark livraison as paid.
-     */
-   
 
     /**
      * Get formatted quantity.
@@ -182,22 +148,6 @@ class LivraisonUsine extends Model
     }
 
     /**
-     * Get formatted price.
-     */
-    public function getPrixFormatteeAttribute()
-    {
-        return number_format($this->prix_unitaire, 2) . ' DH/L';
-    }
-
-    /**
-     * Get formatted total amount.
-     */
-    public function getMontantFormatteeAttribute()
-    {
-        return number_format($this->montant_total, 2) . ' DH';
-    }
-
-    /**
      * Get status label in French.
      */
     public function getStatutLabelAttribute()
@@ -205,7 +155,6 @@ class LivraisonUsine extends Model
         return match($this->statut) {
             'planifiee' => 'Planifiée',
             'validee' => 'Validée',
-            'payee' => 'Payée',
             default => 'Inconnu'
         };
     }
@@ -217,8 +166,7 @@ class LivraisonUsine extends Model
     {
         return match($this->statut) {
             'planifiee' => 'warning',
-            'validee' => 'info',
-            'payee' => 'success',
+            'validee' => 'success',
             default => 'secondary'
         };
     }
@@ -230,16 +178,7 @@ class LivraisonUsine extends Model
     {
         parent::boot();
 
-        static::creating(function ($livraison) {
-            // Calculate montant_total automatically
-            $livraison->montant_total = $livraison->quantite_litres * $livraison->prix_unitaire;
-        });
-
-        static::updating(function ($livraison) {
-            // Recalculate montant_total if quantity or price changed
-            if ($livraison->isDirty(['quantite_litres', 'prix_unitaire'])) {
-                $livraison->montant_total = $livraison->quantite_litres * $livraison->prix_unitaire;
-            }
-        });
+        // Plus besoin de calculer montant_total car c'est maintenant un accessor
+        // qui calcule en temps réel : quantite_litres * PRIX_UNITAIRE_FIXE
     }
 }

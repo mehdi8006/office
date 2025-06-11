@@ -57,7 +57,6 @@
                 <div class="d-flex align-items-center">
                     <div class="flex-grow-1">
                         <h6 class="text-muted mb-1">Montant Total</h6>
-                        <h3 class="mb-0 text-success">{{ number_format($stats['total_montant'], 2) }}</h3>
                         <small class="text-muted">DH</small>
                     </div>
                     <div class="ms-3">
@@ -74,7 +73,6 @@
                 <div class="d-flex align-items-center">
                     <div class="flex-grow-1">
                         <h6 class="text-muted mb-1">Prix Moyen</h6>
-                        <h3 class="mb-0 text-warning">{{ number_format($stats['moyenne_prix'], 2) }}</h3>
                         <small class="text-muted">DH/L</small>
                     </div>
                     <div class="ms-3">
@@ -107,7 +105,6 @@
     <div class="col-md-4 mb-2">
         <div class="card border-left-success h-100">
             <div class="card-body p-3 text-center">
-                <h4 class="text-success mb-1">{{ $stats['livraisons_payees'] }}</h4>
                 <small class="text-muted">Payées</small>
             </div>
         </div>

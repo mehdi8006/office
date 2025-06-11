@@ -16,9 +16,8 @@ return new class extends Migration
             $table->unsignedBigInteger('id_cooperative');
             $table->date('date_livraison');
             $table->decimal('quantite_litres', 10, 2);
-            $table->decimal('prix_unitaire', 8, 2);
-            $table->decimal('montant_total', 12, 2);
-            $table->enum('statut', ['planifiee', 'validee', 'payee'])->default('planifiee');
+            
+            $table->enum('statut', ['planifiee', 'validee'])->default('planifiee');
             $table->timestamps();
             
             // Foreign key constraint

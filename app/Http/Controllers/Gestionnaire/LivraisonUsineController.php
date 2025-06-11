@@ -112,42 +112,26 @@ class LivraisonUsineController extends Controller
     }
 
     /**
-     * Show the form for creating a new livraison.
-     */
-    /**
-     * Show the form for creating a new livraison.
+     * Show the form for creating a new livraison - SIMPLIFIED VERSION.
      */
     public function create(Request $request)
     {
         $cooperativeId = $this->getCurrentCooperativeId();
         $cooperative = $this->getCurrentCooperative();
         
-        // Get date from request or default to today
-        $selectedDate = $request->get('date', today()->format('Y-m-d'));
-        
         try {
-            $date = Carbon::createFromFormat('Y-m-d', $selectedDate);
-        } catch (\Exception $e) {
-            $date = today();
-        }
-
-        try {
-            // Utiliser la méthode sécurisée pour obtenir le stock
-            $stock = StockLait::getOrCreateDailyStock($cooperativeId, $date);
+            // Calculate total available stock for the entire cooperative
+            $stockTotalCooperative = StockLait::where('id_cooperative', $cooperativeId)
+                ->sum('quantite_disponible');
 
             // Check if there's available stock
-            if ($stock->quantite_disponible <= 0) {
+            if ($stockTotalCooperative <= 0) {
                 return redirect()
-                    ->route('gestionnaire.stock.show', $date->format('Y-m-d'))
-                    ->with('error', 'Aucun stock disponible pour cette date.');
+                    ->route('gestionnaire.stock.index')
+                    ->with('error', 'Aucun stock disponible pour votre coopérative.');
             }
 
-            // Get existing livraisons for this date
-            $existingLivraisons = LivraisonUsine::where('id_cooperative', $cooperativeId)
-                ->whereDate('date_livraison', $date)
-                ->get();
-
-            return view('gestionnaire.livraisons.create', compact('stock', 'existingLivraisons', 'cooperative'));
+            return view('gestionnaire.livraisons.create', compact('stockTotalCooperative', 'cooperative'));
 
         } catch (\Exception $e) {
             \Log::error("Erreur lors de la création de livraison: " . $e->getMessage());
@@ -159,14 +143,15 @@ class LivraisonUsineController extends Controller
     }
 
     /**
-     * Store a newly created livraison and update stock.
-     */
-    /**
-     * Store a newly created livraison and update stock.
+     * Store a newly created livraison and update stock - SIMPLIFIED VERSION.
      */
     public function store(Request $request)
     {
         $cooperativeId = $this->getCurrentCooperativeId();
+        
+        // Get current available stock for validation
+        $stockTotalDisponible = StockLait::where('id_cooperative', $cooperativeId)
+            ->sum('quantite_disponible');
         
         $validated = $request->validate([
             'date_livraison' => 'required|date',
@@ -175,13 +160,11 @@ class LivraisonUsineController extends Controller
                 'numeric',
                 'min:0.1',
                 'max:9999.99',
-                'regex:/^\d+(\.\d{1,2})?$/'
-            ],
-            'prix_unitaire' => [
-                'required',
-                'numeric',
-                'min:0.1',
-                'max:999.99',
+                function ($attribute, $value, $fail) use ($stockTotalDisponible) {
+                    if ($value > $stockTotalDisponible) {
+                        $fail("La quantité ne peut pas dépasser le stock disponible (" . number_format($stockTotalDisponible, 2) . " L)");
+                    }
+                },
                 'regex:/^\d+(\.\d{1,2})?$/'
             ],
         ], [
@@ -192,53 +175,46 @@ class LivraisonUsineController extends Controller
             'quantite_litres.min' => 'La quantité doit être au moins 0.1 litre',
             'quantite_litres.max' => 'La quantité ne peut pas dépasser 9999.99 litres',
             'quantite_litres.regex' => 'La quantité ne peut avoir que 2 décimales maximum',
-            'prix_unitaire.required' => 'Le prix unitaire est requis',
-            'prix_unitaire.numeric' => 'Le prix unitaire doit être un nombre',
-            'prix_unitaire.min' => 'Le prix unitaire doit être au moins 0.1 DH',
-            'prix_unitaire.max' => 'Le prix unitaire ne peut pas dépasser 999.99 DH',
-            'prix_unitaire.regex' => 'Le prix unitaire ne peut avoir que 2 décimales maximum',
         ]);
 
         try {
             DB::beginTransaction();
 
-            // Normaliser la date
-            $dateNormalisee = Carbon::parse($validated['date_livraison'])->format('Y-m-d');
+            // Double-check stock availability (in case it changed between form load and submit)
+            $stockTotalDisponibleActuel = StockLait::where('id_cooperative', $cooperativeId)
+                ->sum('quantite_disponible');
 
-            // Get stock for this date using the secure method
-            $stock = StockLait::getOrCreateDailyStock($cooperativeId, $dateNormalisee);
-
-            // Check if enough stock is available
-            if ($validated['quantite_litres'] > $stock->quantite_disponible) {
+            if ($validated['quantite_litres'] > $stockTotalDisponibleActuel) {
                 return back()
                     ->withInput()
                     ->with('error', sprintf(
-                        'Quantité insuffisante. Stock disponible: %s L',
-                        number_format($stock->quantite_disponible, 2)
+                        'Quantité insuffisante. Stock total disponible: %s L',
+                        number_format($stockTotalDisponibleActuel, 2)
                     ));
             }
 
-            // Create the livraison
+            // Normaliser la date
+            $dateNormalisee = Carbon::parse($validated['date_livraison'])->format('Y-m-d');
+
+            // Create the livraison (montant calculé automatiquement via accessor)
             $livraison = LivraisonUsine::create([
                 'id_cooperative' => $cooperativeId,
                 'date_livraison' => $dateNormalisee,
                 'quantite_litres' => $validated['quantite_litres'],
-                'prix_unitaire' => $validated['prix_unitaire'],
                 'statut' => 'planifiee',
-                // montant_total will be auto-calculated by the model
+                // montant_total is now calculated automatically via accessor
             ]);
 
-            // Update stock (reduce available quantity)
-            $stock->livrer($validated['quantite_litres']);
+            // Update stocks by reducing available quantities intelligently
+            $this->reduceAvailableStock($cooperativeId, $validated['quantite_litres']);
 
             DB::commit();
 
             return redirect()
                 ->route('gestionnaire.livraisons.index')
                 ->with('success', sprintf(
-                    'Livraison créée avec succès ! Quantité: %s L - Montant: %s DH',
-                    number_format($livraison->quantite_litres, 2),
-                    number_format($livraison->montant_total, 2)
+                    'Livraison créée avec succès ! Quantité: %s L',
+                    number_format($livraison->quantite_litres, 2)
                 ));
                 
         } catch (\Exception $e) {
@@ -248,6 +224,37 @@ class LivraisonUsineController extends Controller
             return back()
                 ->withInput()
                 ->with('error', 'Erreur lors de la création de la livraison: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Intelligently reduce available stock from multiple dates.
+     */
+    private function reduceAvailableStock($cooperativeId, $quantiteALivrer)
+    {
+        // Get stocks with available quantity, ordered by date (oldest first = FIFO)
+        $stocks = StockLait::where('id_cooperative', $cooperativeId)
+            ->where('quantite_disponible', '>', 0)
+            ->orderBy('date_stock', 'asc')
+            ->get();
+
+        $quantiteRestante = $quantiteALivrer;
+
+        foreach ($stocks as $stock) {
+            if ($quantiteRestante <= 0) {
+                break;
+            }
+
+            $quantiteAPrendre = min($quantiteRestante, $stock->quantite_disponible);
+            
+            // Use the existing livrer method from StockLait model
+            $stock->livrer($quantiteAPrendre);
+            
+            $quantiteRestante -= $quantiteAPrendre;
+        }
+
+        if ($quantiteRestante > 0) {
+            throw new \Exception('Stock insuffisant pour livrer la quantité demandée');
         }
     }
 
@@ -280,8 +287,6 @@ class LivraisonUsineController extends Controller
 
     /**
      * Remove the specified livraison and restore stock.
-     *//**
-     * Remove the specified livraison and restore stock.
      */
     public function destroy(LivraisonUsine $livraison)
     {
@@ -298,33 +303,21 @@ class LivraisonUsineController extends Controller
             DB::beginTransaction();
 
             $quantite = $livraison->quantite_litres;
-            $montant = $livraison->montant_total;
             $dateNormalisee = $livraison->date_livraison->format('Y-m-d');
             
-            // Get stock for this date
-            $stock = StockLait::where('id_cooperative', $livraison->id_cooperative)
-                ->whereDate('date_stock', $dateNormalisee)
-                ->first();
-
             // Delete the livraison first
             $livraison->delete();
 
-            // Restore stock if it exists
-            if ($stock) {
-                $stock->annulerLivraison($quantite);
-            } else {
-                // If stock doesn't exist, recreate it
-                StockLait::updateDailyStock($livraison->id_cooperative, $dateNormalisee);
-            }
+            // Restore stock intelligently (add back to the most recent available stock)
+            $this->restoreAvailableStock($livraison->id_cooperative, $quantite, $dateNormalisee);
 
             DB::commit();
 
             return redirect()
                 ->route('gestionnaire.livraisons.index')
                 ->with('success', sprintf(
-                    'Livraison supprimée avec succès ! (Quantité: %s L - Montant: %s DH)',
-                    number_format($quantite, 2),
-                    number_format($montant, 2)
+                    'Livraison supprimée avec succès ! (Quantité: %s L)',
+                    number_format($quantite, 2)
                 ));
                 
         } catch (\Exception $e) {
@@ -336,6 +329,41 @@ class LivraisonUsineController extends Controller
                 ->with('error', 'Erreur lors de la suppression: ' . $e->getMessage());
         }
     }
+
+    /**
+     * Restore stock when a livraison is cancelled.
+     */
+    private function restoreAvailableStock($cooperativeId, $quantiteARestaurer, $dateLivraison)
+    {
+        // Try to restore to the original date first
+        $stockOriginal = StockLait::where('id_cooperative', $cooperativeId)
+            ->whereDate('date_stock', $dateLivraison)
+            ->first();
+
+        if ($stockOriginal) {
+            $stockOriginal->annulerLivraison($quantiteARestaurer);
+        } else {
+            // If original date stock doesn't exist, add to most recent stock
+            $stockRecent = StockLait::where('id_cooperative', $cooperativeId)
+                ->orderBy('date_stock', 'desc')
+                ->first();
+
+            if ($stockRecent) {
+                $stockRecent->increment('quantite_disponible', $quantiteARestaurer);
+                $stockRecent->decrement('quantite_livree', $quantiteARestaurer);
+            } else {
+                // Create new stock entry for today if no stock exists
+                StockLait::create([
+                    'id_cooperative' => $cooperativeId,
+                    'date_stock' => $dateLivraison,
+                    'quantite_totale' => $quantiteARestaurer,
+                    'quantite_disponible' => $quantiteARestaurer,
+                    'quantite_livree' => 0,
+                ]);
+            }
+        }
+    }
+
     /**
      * Calculate statistics for the livraisons listing.
      */
@@ -356,8 +384,6 @@ class LivraisonUsineController extends Controller
 
         $totalLivraisons = $query->count();
         $totalQuantite = $query->sum('quantite_litres');
-        $totalMontant = $query->sum('montant_total');
-        $moyennePrix = $query->avg('prix_unitaire') ?: 0;
 
         // Count by status
         $statsQuery = clone $query;
@@ -365,18 +391,12 @@ class LivraisonUsineController extends Controller
         
         $statsQuery = clone $query;
         $validees = $statsQuery->where('statut', 'validee')->count();
-        
-        $statsQuery = clone $query;
-        $payees = $statsQuery->where('statut', 'payee')->count();
 
         return [
             'total_livraisons' => $totalLivraisons,
             'total_quantite' => $totalQuantite,
-            'total_montant' => $totalMontant,
-            'moyenne_prix' => $moyennePrix,
             'livraisons_planifiees' => $planifiees,
             'livraisons_validees' => $validees,
-            'livraisons_payees' => $payees,
         ];
     }
 }
