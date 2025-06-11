@@ -183,6 +183,68 @@
                     @endif
                 </div>
             </div>
+
+            <!-- Section Membres Éleveurs - Remplacée par bouton de téléchargement -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-users me-2"></i>
+                        Membres Éleveurs de la Coopérative
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-8">
+                            <div class="d-flex align-items-center mb-3">
+                                <div class="me-4">
+                                    <i class="fas fa-users fa-3x text-primary"></i>
+                                </div>
+                                <div>
+                                    <h4 class="mb-1">{{ $cooperative->membres->count() }} Membres</h4>
+                                    <p class="text-muted mb-0">
+                                        {{ $cooperative->membresActifs->count() }} actifs, 
+                                        {{ $cooperative->membresInactifs->count() }} inactifs
+                                        @if($cooperative->membresSupprimes->count() > 0)
+                                            , {{ $cooperative->membresSupprimes->count() }} supprimés
+                                        @endif
+                                    </p>
+                                </div>
+                            </div>
+                            
+                            @if($cooperative->membres->count() > 0)
+                                <div class="alert alert-info" role="alert">
+                                    <i class="fas fa-info-circle me-2"></i>
+                                    <strong>Téléchargement disponible :</strong> 
+                                    Obtenez la liste complète des membres avec toutes leurs informations 
+                                    (nom, contact, adresse, carte nationale, statut, date d'inscription) au format PDF.
+                                </div>
+                            @else
+                                <div class="alert alert-warning" role="alert">
+                                    <i class="fas fa-exclamation-triangle me-2"></i>
+                                    Cette coopérative n'a encore aucun membre inscrit.
+                                </div>
+                            @endif
+                        </div>
+                        <div class="col-md-4 text-center">
+                            @if($cooperative->membres->count() > 0)
+                                <a href="{{ route('direction.cooperatives.download-members', $cooperative) }}" 
+                                   class="btn btn-primary btn-lg w-100 mb-3">
+                                    <i class="fas fa-download me-2"></i>
+                                    Télécharger Liste des Membres
+                                </a>
+                                <small class="text-muted d-block">
+                                    Format PDF avec toutes les informations détaillées
+                                </small>
+                            @else
+                                <div class="text-muted">
+                                    <i class="fas fa-users-slash fa-2x mb-2 d-block"></i>
+                                    Aucun membre à télécharger
+                                </div>
+                            @endif
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <!-- Statistiques et actions -->
@@ -191,7 +253,7 @@
             <div class="card mb-4">
                 <div class="card-header">
                     <h5 class="card-title mb-0">
-                        <i class="fas fa-users me-2"></i>
+                        <i class="fas fa-chart-pie me-2"></i>
                         Statistiques des Membres
                     </h5>
                 </div>
@@ -239,6 +301,13 @@
                             <i class="fas fa-edit me-1"></i>
                             Modifier les informations
                         </a>
+                        
+                        @if($cooperative->membres->count() > 0)
+                            <a href="{{ route('direction.cooperatives.download-members', $cooperative) }}" class="btn btn-success">
+                                <i class="fas fa-download me-1"></i>
+                                Télécharger Membres PDF
+                            </a>
+                        @endif
                         
                         @if($cooperative->statut == 'actif')
                             <form method="POST" 
@@ -297,63 +366,5 @@
             </div>
         </div>
     </div>
-
-    <!-- Liste des membres (aperçu) -->
-    @if($cooperative->membres->count() > 0)
-        <div class="card mt-4">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <h5 class="card-title mb-0">
-                    <i class="fas fa-users me-2"></i>
-                    Membres de la Coopérative ({{ $cooperative->membres->count() }})
-                </h5>
-                <span class="badge bg-info">Aperçu - 5 premiers</span>
-            </div>
-            <div class="card-body p-0">
-                <div class="table-responsive">
-                    <table class="table table-hover mb-0">
-                        <thead class="table-light">
-                            <tr>
-                                <th>Nom Complet</th>
-                                <th>Email</th>
-                                <th>Téléphone</th>
-                                <th>Statut</th>
-                                <th>Inscrit le</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach($cooperative->membres->take(5) as $membre)
-                                <tr>
-                                    <td>
-                                        <strong>{{ $membre->nom_complet }}</strong>
-                                        <br>
-                                        <small class="text-muted">{{ $membre->numero_carte_nationale }}</small>
-                                    </td>
-                                    <td>{{ $membre->email }}</td>
-                                    <td>{{ $membre->telephone }}</td>
-                                    <td>
-                                        @if($membre->statut == 'actif')
-                                            <span class="badge bg-success">Actif</span>
-                                        @elseif($membre->statut == 'inactif')
-                                            <span class="badge bg-warning">Inactif</span>
-                                        @else
-                                            <span class="badge bg-danger">Supprimé</span>
-                                        @endif
-                                    </td>
-                                    <td>{{ $membre->created_at->format('d/m/Y') }}</td>
-                                </tr>
-                            @endforeach
-                        </tbody>
-                    </table>
-                </div>
-                @if($cooperative->membres->count() > 5)
-                    <div class="card-footer text-center">
-                        <small class="text-muted">
-                            Et {{ $cooperative->membres->count() - 5 }} autres membres...
-                        </small>
-                    </div>
-                @endif
-            </div>
-        </div>
-    @endif
 </div>
 @endsection

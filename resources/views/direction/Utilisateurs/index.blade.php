@@ -19,38 +19,6 @@
                 </a>
             </div>
 
-            <!-- Section Téléchargement Éleveurs -->
-            <div class="card mb-4 border-success">
-                <div class="card-header bg-success text-white">
-                    <h5 class="card-title mb-0">
-                        <i class="fas fa-download me-2"></i>
-                        Téléchargement Listes Éleveurs
-                    </h5>
-                </div>
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-8">
-                            <p class="mb-3">
-                                <i class="fas fa-info-circle text-info me-1"></i>
-                                Téléchargez les listes complètes des membres éleveurs par coopérative ou globalement.
-                            </p>
-                            <ul class="small text-muted">
-                                <li>Export au format CSV ou Excel</li>
-                                <li>Filtrage par coopérative et statut</li>
-                                <li>Données complètes (contact, adresse, etc.)</li>
-                                <li>Historique des inscriptions</li>
-                            </ul>
-                        </div>
-                        <div class="col-md-4 text-end">
-                            <a href="{{ route('direction.eleveurs.download') }}" class="btn btn-success btn-lg">
-                                <i class="fas fa-download me-2"></i>
-                                Télécharger Listes Éleveurs
-                            </a>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
             <!-- Filtres et Recherche -->
             <div class="card mb-4">
                 <div class="card-body">

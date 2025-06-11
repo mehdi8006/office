@@ -123,6 +123,12 @@ Route::middleware('auth')->group(function () {
 
         // Gestion des Coopératives
         Route::prefix('cooperatives')->name('cooperatives.')->group(function () {
+            // ROUTES pour téléchargement PDF
+            Route::get('/download-all', [DirectionCooperativeController::class, 'downloadAllPDF'])->name('download-all');
+            Route::get('/{cooperative}/download-members', [DirectionCooperativeController::class, 'downloadMembersPDF'])->name('download-members');
+            Route::get('/download', [DirectionCooperativeController::class, 'showDownloadForm'])->name('download');
+            Route::post('/download', [DirectionCooperativeController::class, 'downloadPDF'])->name('download.pdf');
+            
             Route::get('/', [DirectionCooperativeController::class, 'index'])->name('index');
             Route::get('/create', [DirectionCooperativeController::class, 'create'])->name('create');
             Route::post('/', [DirectionCooperativeController::class, 'store'])->name('store');
@@ -135,9 +141,7 @@ Route::middleware('auth')->group(function () {
             Route::patch('/{cooperative}/deactivate', [DirectionCooperativeController::class, 'deactivate'])->name('deactivate');
             Route::patch('/{cooperative}/remove-responsable', [DirectionCooperativeController::class, 'removeResponsable'])->name('remove-responsable');
             
-            // NOUVELLES ROUTES pour téléchargement PDF
-            Route::get('/download', [DirectionCooperativeController::class, 'showDownloadForm'])->name('download');
-            Route::post('/download', [DirectionCooperativeController::class, 'downloadPDF'])->name('download.pdf');
+            
         });
 
         // Gestion des Utilisateurs
@@ -162,12 +166,6 @@ Route::middleware('auth')->group(function () {
             
             // API pour statistiques
             Route::get('/api/stats', [DirectionUtilisateurController::class, 'getStats'])->name('api.stats');
-        });
-
-        // Gestion des Listes Éleveurs
-        Route::prefix('eleveurs')->name('eleveurs.')->group(function () {
-            Route::get('/download', [DirectionUtilisateurController::class, 'eleveursDownload'])->name('download');
-            Route::post('/download', [DirectionUtilisateurController::class, 'downloadEleveurs'])->name('download.process');
         });
     });
 });

@@ -200,13 +200,7 @@
                                             USVA
                                         </a>
                                     </li>
-                                    <li><hr class="dropdown-divider"></li>
-                                    <li>
-                                        <a class="dropdown-item" href="{{ route('direction.eleveurs.download') }}">
-                                            <i class="fas fa-download me-2 text-success"></i>
-                                            Télécharger Listes Éleveurs
-                                        </a>
-                                    </li>
+                                    
                                 </ul>
                             </li>
                         @endif

@@ -227,6 +227,104 @@ class CooperativeController extends Controller
     }
 
     /**
+     * Download all cooperatives list as PDF directly.
+     * NOUVELLE MÉTHODE POUR TÉLÉCHARGEMENT DIRECT
+     */
+    public function downloadAllPDF()
+    {
+        $this->checkDirectionAccess();
+
+        // Récupérer toutes les coopératives avec leurs relations
+        $cooperatives = Cooperative::with(['responsable', 'membresActifs'])
+                                  ->orderBy('nom_cooperative')
+                                  ->get();
+
+        // Préparer les données pour le PDF
+        $data = [
+            'cooperatives' => $cooperatives,
+            'filtres' => [
+                'statut' => null,
+                'responsable_filter' => null,
+                'responsable_nom' => null,
+                'date_debut' => null,
+                'date_fin' => null,
+                'include_membres' => true, // Toujours inclure les membres dans la liste complète
+            ],
+            'stats' => [
+                'total' => $cooperatives->count(),
+                'actives' => $cooperatives->where('statut', 'actif')->count(),
+                'inactives' => $cooperatives->where('statut', 'inactif')->count(),
+                'avec_responsable' => $cooperatives->whereNotNull('responsable_id')->count(),
+                'sans_responsable' => $cooperatives->whereNull('responsable_id')->count(),
+                'total_membres' => $cooperatives->sum(function ($coop) {
+                    return $coop->membresActifs->count();
+                }),
+            ],
+            'generated_at' => now(),
+            'generated_by' => Auth::user(),
+        ];
+
+        // Générer le PDF
+        $pdf = PDF::loadView('direction.cooperatives.pdf-template', $data);
+        
+        // Nom du fichier avec date et heure
+        $filename = 'liste_cooperatives_' . date('Y-m-d_H-i-s') . '.pdf';
+
+        // Configuration du PDF
+        $pdf->setPaper('A4', 'portrait');
+        $pdf->setOptions([
+            'isHtml5ParserEnabled' => true,
+            'isPhpEnabled' => true,
+            'defaultFont' => 'Arial'
+        ]);
+
+        return $pdf->download($filename);
+    }
+
+    /**
+     * Download members list of a specific cooperative as PDF.
+     * NOUVELLE MÉTHODE POUR TÉLÉCHARGEMENT DES MEMBRES
+     */
+    public function downloadMembersPDF(Cooperative $cooperative)
+    {
+        $this->checkDirectionAccess();
+
+        // Charger tous les membres de la coopérative
+        $cooperative->load(['responsable', 'membres', 'membresActifs', 'membresInactifs', 'membresSupprimes']);
+
+        // Préparer les données pour le PDF
+        $data = [
+            'cooperative' => $cooperative,
+            'membres' => $cooperative->membres()->orderBy('nom_complet')->get(),
+            'stats' => [
+                'total_membres' => $cooperative->membres()->count(),
+                'membres_actifs' => $cooperative->membresActifs()->count(),
+                'membres_inactifs' => $cooperative->membresInactifs()->count(),
+                'membres_supprimes' => $cooperative->membresSupprimes()->count(),
+            ],
+            'generated_at' => now(),
+            'generated_by' => Auth::user(),
+        ];
+
+        // Générer le PDF
+        $pdf = PDF::loadView('direction.cooperatives.membres-pdf-template', $data);
+        
+        // Nom du fichier avec nom de la coopérative
+        $cooperativeName = preg_replace('/[^A-Za-z0-9\-]/', '_', $cooperative->nom_cooperative);
+        $filename = 'membres_' . $cooperativeName . '_' . date('Y-m-d_H-i-s') . '.pdf';
+
+        // Configuration du PDF
+        $pdf->setPaper('A4', 'portrait');
+        $pdf->setOptions([
+            'isHtml5ParserEnabled' => true,
+            'isPhpEnabled' => true,
+            'defaultFont' => 'Arial'
+        ]);
+
+        return $pdf->download($filename);
+    }
+
+    /**
      * Show download form for cooperatives PDF.
      */
     public function showDownloadForm()

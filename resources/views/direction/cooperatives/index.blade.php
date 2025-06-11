@@ -7,20 +7,18 @@
     <div class="row">
         <div class="col-12">
             <!-- Header -->
-          
             <div class="d-flex justify-content-between align-items-center mb-4">
                 <h1 class="h3">Gestion des Coopératives</h1>
                 <div>
-                    <a href="{{ route('direction.cooperatives.download') }}" class="btn btn-outline-danger me-2">
-                        <i class="fas fa-file-pdf"></i> Télécharger PDF
+                    <a href="{{ route('direction.cooperatives.download-all') }}" class="btn btn-primary me-2">
+                        <i class="fas fa-download"></i> Télécharger Liste des Coopératives
                     </a>
+                   
                     <a href="{{ route('direction.cooperatives.create') }}" class="btn btn-success">
                         <i class="fas fa-plus"></i> Nouvelle Coopérative
                     </a>
                 </div>
             </div>
-
-           
 
             <!-- Filtres et Recherche -->
             <div class="card mb-4">
@@ -131,6 +129,19 @@
                             </div>
                         </div>
                     </div>
+                </div>
+            </div>
+
+            <!-- Information sur le téléchargement -->
+            <div class="alert alert-info d-flex align-items-center mb-4" role="alert">
+                <i class="fas fa-info-circle me-3 fa-lg"></i>
+                <div>
+                    <strong>Téléchargement rapide :</strong> 
+                    Cliquez sur "Télécharger Liste des Coopératives" pour obtenir immédiatement un PDF contenant toutes les coopératives avec leurs informations complètes (matricule, nom, contact, adresse, responsable, statut, date de création).
+                    <br>
+                    <small class="text-muted">
+                        Pour des options de filtrage avancées, utilisez le bouton "Options avancées".
+                    </small>
                 </div>
             </div>
 
