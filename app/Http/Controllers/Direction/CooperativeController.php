@@ -8,6 +8,7 @@ use App\Models\Utilisateur;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 class CooperativeController extends Controller
 {
@@ -223,5 +224,115 @@ class CooperativeController extends Controller
         $cooperative->update(['responsable_id' => null]);
 
         return redirect()->back()->with('success', 'Responsable retiré de la coopérative avec succès.');
+    }
+
+    /**
+     * Show download form for cooperatives PDF.
+     */
+    public function showDownloadForm()
+    {
+        $this->checkDirectionAccess();
+
+        // Récupérer tous les gestionnaires pour le filtre
+        $gestionnaires = Utilisateur::where('role', 'gestionnaire')
+                                   ->where('statut', 'actif')
+                                   ->orderBy('nom_complet')
+                                   ->get();
+
+        // Statistiques des coopératives
+        $stats = [
+            'total_cooperatives' => Cooperative::count(),
+            'cooperatives_actives' => Cooperative::where('statut', 'actif')->count(),
+            'cooperatives_inactives' => Cooperative::where('statut', 'inactif')->count(),
+            'avec_responsable' => Cooperative::whereNotNull('responsable_id')->count(),
+            'sans_responsable' => Cooperative::whereNull('responsable_id')->count(),
+        ];
+
+        return view('direction.cooperatives.download', compact('gestionnaires', 'stats'));
+    }
+
+    /**
+     * Download cooperatives list as PDF.
+     */
+    public function downloadPDF(Request $request)
+    {
+        $this->checkDirectionAccess();
+
+        $request->validate([
+            'statut' => 'nullable|in:actif,inactif',
+            'responsable_filter' => 'nullable|in:avec,sans',
+            'responsable_id' => 'nullable|exists:utilisateurs,id_utilisateur',
+            'date_debut' => 'nullable|date',
+            'date_fin' => 'nullable|date|after_or_equal:date_debut',
+            'include_membres' => 'nullable|boolean',
+        ]);
+
+        // Construire la requête
+        $query = Cooperative::with(['responsable', 'membresActifs']);
+
+        // Filtres
+        if ($request->statut) {
+            $query->where('statut', $request->statut);
+        }
+
+        if ($request->responsable_filter) {
+            if ($request->responsable_filter === 'avec') {
+                $query->whereNotNull('responsable_id');
+            } else {
+                $query->whereNull('responsable_id');
+            }
+        }
+
+        if ($request->responsable_id) {
+            $query->where('responsable_id', $request->responsable_id);
+        }
+
+        if ($request->date_debut && $request->date_fin) {
+            $query->whereBetween('created_at', [$request->date_debut, $request->date_fin]);
+        }
+
+        $cooperatives = $query->orderBy('nom_cooperative')->get();
+
+        // Préparer les données pour le PDF
+        $data = [
+            'cooperatives' => $cooperatives,
+            'filtres' => [
+                'statut' => $request->statut,
+                'responsable_filter' => $request->responsable_filter,
+                'responsable_nom' => $request->responsable_id ? 
+                    Utilisateur::find($request->responsable_id)->nom_complet : null,
+                'date_debut' => $request->date_debut,
+                'date_fin' => $request->date_fin,
+                'include_membres' => $request->boolean('include_membres'),
+            ],
+            'stats' => [
+                'total' => $cooperatives->count(),
+                'actives' => $cooperatives->where('statut', 'actif')->count(),
+                'inactives' => $cooperatives->where('statut', 'inactif')->count(),
+                'avec_responsable' => $cooperatives->whereNotNull('responsable_id')->count(),
+                'sans_responsable' => $cooperatives->whereNull('responsable_id')->count(),
+                'total_membres' => $cooperatives->sum(function ($coop) {
+                    return $coop->membresActifs->count();
+                }),
+            ],
+            'generated_at' => now(),
+            'generated_by' => Auth::user(),
+        ];
+
+        // Générer le PDF
+        $pdf = PDF::loadView('direction.cooperatives.pdf-template', $data);
+        
+        // Nom du fichier
+        $filename = 'cooperatives_' . date('Y-m-d_H-i-s') . '.pdf';
+
+        // Configuration du PDF
+        $pdf->setPaper('A4', 'portrait');
+        $pdf->setOptions([
+            'isHtml5ParserEnabled' => true,
+            'isPhpEnabled' => true,
+            'defaultFont' => 'Arial'
+        ]);
+
+        return $pdf->download($filename);
     }
 }

@@ -145,10 +145,17 @@
                                             Inactives
                                         </a>
                                     </li>
-                                    <li>
+                                     <li>
                                         <a class="dropdown-item" href="{{ route('direction.cooperatives.index') }}?responsable=">
                                             <i class="fas fa-user-times me-2 text-danger"></i>
                                             Sans responsable
+                                        </a>
+                                    </li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li>
+                                        <a class="dropdown-item" href="{{ route('direction.cooperatives.download') }}">
+                                            <i class="fas fa-file-pdf me-2 text-danger"></i>
+                                            Télécharger PDF
                                         </a>
                                     </li>
                                 </ul>

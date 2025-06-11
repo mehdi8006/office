@@ -7,29 +7,20 @@
     <div class="row">
         <div class="col-12">
             <!-- Header -->
+          
             <div class="d-flex justify-content-between align-items-center mb-4">
                 <h1 class="h3">Gestion des Coopératives</h1>
-                <a href="{{ route('direction.cooperatives.create') }}" class="btn btn-success">
-                    <i class="fas fa-plus"></i> Nouvelle Coopérative
-                </a>
+                <div>
+                    <a href="{{ route('direction.cooperatives.download') }}" class="btn btn-outline-danger me-2">
+                        <i class="fas fa-file-pdf"></i> Télécharger PDF
+                    </a>
+                    <a href="{{ route('direction.cooperatives.create') }}" class="btn btn-success">
+                        <i class="fas fa-plus"></i> Nouvelle Coopérative
+                    </a>
+                </div>
             </div>
 
-            <!-- Messages d'alerte -->
-            @if(session('success'))
-                <div class="alert alert-success alert-dismissible fade show" role="alert">
-                    <i class="fas fa-check-circle me-2"></i>
-                    {{ session('success') }}
-                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                </div>
-            @endif
-
-            @if(session('error'))
-                <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                    <i class="fas fa-exclamation-circle me-2"></i>
-                    {{ session('error') }}
-                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                </div>
-            @endif
+           
 
             <!-- Filtres et Recherche -->
             <div class="card mb-4">

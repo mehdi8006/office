@@ -115,15 +115,6 @@ Route::middleware('auth')->group(function () {
         });
     });
 
-
-
-
-
-
-
-
-
-
     // Direction Routes
     Route::prefix('direction')->name('direction.')->group(function () {
         
@@ -143,6 +134,10 @@ Route::middleware('auth')->group(function () {
             Route::patch('/{cooperative}/activate', [DirectionCooperativeController::class, 'activate'])->name('activate');
             Route::patch('/{cooperative}/deactivate', [DirectionCooperativeController::class, 'deactivate'])->name('deactivate');
             Route::patch('/{cooperative}/remove-responsable', [DirectionCooperativeController::class, 'removeResponsable'])->name('remove-responsable');
+            
+            // NOUVELLES ROUTES pour téléchargement PDF
+            Route::get('/download', [DirectionCooperativeController::class, 'showDownloadForm'])->name('download');
+            Route::post('/download', [DirectionCooperativeController::class, 'downloadPDF'])->name('download.pdf');
         });
 
         // Gestion des Utilisateurs
