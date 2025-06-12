@@ -100,11 +100,11 @@ Route::middleware('auth')->group(function () {
 
         // Gestion des Paiements de l'Usine
         Route::prefix('paiements')->name('paiements.')->group(function () {
-            Route::get('/', [PaiementController::class, 'index'])->name('index');
-            Route::post('/calculer-periode', [PaiementController::class, 'calculerPeriode'])->name('calculer-periode');
-            Route::post('/valider-periode', [PaiementController::class, 'validerPeriode'])->name('valider-periode');
-            Route::put('/{paiement}/marquer-paye', [PaiementController::class, 'marquerPaye'])->name('marquer-paye');
-        });
+    Route::get('/', [PaiementController::class, 'index'])->name('index');
+    Route::post('/calculer-quinzaine', [PaiementController::class, 'calculerQuinzaine'])->name('calculer-quinzaine');
+    Route::post('/marquer-paye-quinzaine', [PaiementController::class, 'marquerPayeQuinzaine'])->name('marquer-paye-quinzaine');
+    Route::get('/download-historique', [PaiementController::class, 'downloadHistoriqueQuinzaines'])->name('download-historique');
+});
 
         // Gestion des Paiements aux Éleveurs
         Route::prefix('paiements-eleveurs')->name('paiements-eleveurs.')->group(function () {

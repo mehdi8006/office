@@ -9,9 +9,15 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 class PaiementController extends Controller
 {
+    /**
+     * Prix unitaire par défaut (configurable)
+     */
+    const PRIX_UNITAIRE_DEFAULT = 3.50;
+
     /**
      * Get the cooperative ID for the current gestionnaire.
      */
@@ -57,19 +63,7 @@ class PaiementController extends Controller
     }
 
     /**
-     * Check if current user can access a paiement.
-     */
-    private function checkAccess($paiement)
-    {
-        $cooperativeId = $this->getCurrentCooperativeId();
-        
-        if ($paiement->id_cooperative != $cooperativeId) {
-            abort(403, 'Vous ne pouvez pas accéder à ce paiement.');
-        }
-    }
-
-    /**
-     * Display quinzaines with their payment status and totals.
+     * Display quinzaines with their payment status.
      */
     public function index(Request $request)
     {
@@ -80,57 +74,65 @@ class PaiementController extends Controller
         $selectedMonth = $request->get('mois', now()->month);
         $selectedYear = $request->get('annee', now()->year);
         
-        // Calculate quinzaines data - SEULEMENT 1 MOIS (2 quinzaines)
-        $quinzaines = $this->getQuinzainesData($cooperativeId, $selectedMonth, $selectedYear);
+        // Calculate prix unitaire (dernière valeur utilisée ou défaut)
+        $dernierPrix = PaiementCooperativeUsine::where('id_cooperative', $cooperativeId)
+            ->orderBy('created_at', 'desc')
+            ->value('prix_unitaire');
+        $prixUnitaire = $dernierPrix ?? self::PRIX_UNITAIRE_DEFAULT;
         
-        // Calculate overall statistics
-        $stats = $this->calculateQuinzainesStats($quinzaines);
-
-        return view('gestionnaire.paiements.index', compact('quinzaines', 'stats', 'cooperative', 'selectedMonth', 'selectedYear'));
+        // Calculate quinzaines data for the selected month
+        $quinzaines = $this->getQuinzainesData($cooperativeId, $selectedMonth, $selectedYear, $prixUnitaire);
+        
+        // Get pending payments (quinzaines en attente)
+        $paiementsEnAttente = $this->getPaiementsEnAttente($cooperativeId, $selectedMonth, $selectedYear);
+        
+        return view('gestionnaire.paiements.index', compact(
+            'quinzaines', 
+            'paiementsEnAttente',
+            'cooperative', 
+            'prixUnitaire',
+            'selectedMonth', 
+            'selectedYear'
+        ));
     }
 
     /**
      * Calculate quinzaines data for a specific month/year.
-     * MODIFIÉ : Affiche seulement 1 mois (2 quinzaines) au lieu de 3 mois
      */
-    private function getQuinzainesData($cooperativeId, $month, $year)
+    private function getQuinzainesData($cooperativeId, $month, $year, $prixUnitaire)
     {
         $quinzaines = [];
-        
-        // Generate quinzaines SEULEMENT pour le mois sélectionné
         $date = Carbon::create($year, $month);
         
-        // First quinzaine: 1st to 15th
-        $quinzaine1 = $this->calculateQuinzaineData(
+        // Quinzaine 1: 1-15
+        $debut1 = $date->copy()->startOfMonth();
+        $fin1 = $date->copy()->startOfMonth()->addDays(14);
+        $quinzaines[] = $this->calculateQuinzaineData(
             $cooperativeId,
-            $date->copy()->startOfMonth(),
-            $date->copy()->startOfMonth()->addDays(14),
-            "1-15 " . $date->translatedFormat('F Y')
+            $debut1,
+            $fin1,
+            "1-15 " . $date->translatedFormat('F Y'),
+            $prixUnitaire
         );
         
-        // Second quinzaine: 16th to end of month
-        $quinzaine2 = $this->calculateQuinzaineData(
+        // Quinzaine 2: 16-fin du mois
+        $debut2 = $date->copy()->startOfMonth()->addDays(15);
+        $fin2 = $date->copy()->endOfMonth();
+        $quinzaines[] = $this->calculateQuinzaineData(
             $cooperativeId,
-            $date->copy()->startOfMonth()->addDays(15),
-            $date->copy()->endOfMonth(),
-            "16-" . $date->endOfMonth()->day . " " . $date->translatedFormat('F Y')
+            $debut2,
+            $fin2,
+            "16-" . $fin2->day . " " . $date->translatedFormat('F Y'),
+            $prixUnitaire
         );
-        
-        $quinzaines[] = $quinzaine1;
-        $quinzaines[] = $quinzaine2;
-        
-        // Sort by date desc (most recent first)
-        usort($quinzaines, function($a, $b) {
-            return $b['date_fin'] <=> $a['date_fin'];
-        });
         
         return $quinzaines;
     }
 
     /**
-     * Calculate data for a specific quinzaine period.
+     * Calculate data for a specific quinzaine.
      */
-    private function calculateQuinzaineData($cooperativeId, $dateDebut, $dateFin, $label)
+    private function calculateQuinzaineData($cooperativeId, $dateDebut, $dateFin, $label, $prixUnitaire)
     {
         // Get validated livraisons for this period
         $livraisons = LivraisonUsine::where('id_cooperative', $cooperativeId)
@@ -138,121 +140,105 @@ class PaiementController extends Controller
             ->whereBetween('date_livraison', [$dateDebut, $dateFin])
             ->get();
 
-        // Calculate totals
         $totalQuantite = $livraisons->sum('quantite_litres');
-        $totalMontant = $livraisons->sum('montant_total');
-        $nombreLivraisons = $livraisons->count();
+        $montantCalcule = $totalQuantite * $prixUnitaire;
 
-        // Check payment status - MODIFIÉ : chercher par période au lieu de par livraison
-        $paiementsExistants = PaiementCooperativeUsine::where('id_cooperative', $cooperativeId)
+        // Check existing payment for this quinzaine
+        $paiementExistant = PaiementCooperativeUsine::where('id_cooperative', $cooperativeId)
             ->whereBetween('date_paiement', [$dateDebut, $dateFin])
-            ->get();
-
-        $montantPaye = $paiementsExistants->where('statut', 'paye')->sum('montant');
-        $montantEnAttente = $paiementsExistants->where('statut', 'en_attente')->sum('montant');
-        $totalPaiements = $paiementsExistants->sum('montant');
+            ->first();
 
         // Determine status
         $statut = 'non_calcule';
         $statutColor = 'secondary';
         $peutCalculer = false;
+        $montantPaye = 0;
 
-        if ($totalQuantite > 0) {
-            if ($totalPaiements >= $totalMontant) {
-                if ($montantPaye >= $totalMontant) {
-                    $statut = 'paye';
-                    $statutColor = 'success';
-                } else {
-                    $statut = 'calcule';
-                    $statutColor = 'warning';
-                }
+        if ($paiementExistant) {
+            $montantCalcule = $paiementExistant->montant;
+            if ($paiementExistant->statut === 'paye') {
+                $statut = 'paye';
+                $statutColor = 'success';
+                $montantPaye = $paiementExistant->montant;
             } else {
+                $statut = 'en_attente';
+                $statutColor = 'warning';
+            }
+        } else {
+            if ($totalQuantite > 0 && $dateFin->isPast()) {
                 $statut = 'non_calcule';
                 $statutColor = 'danger';
-                $peutCalculer = $dateFin->isPast(); // Only past periods can be calculated
+                $peutCalculer = true;
             }
         }
 
         return [
-            'periode_label' => $label,
+            'label' => $label,
             'date_debut' => $dateDebut->format('Y-m-d'),
             'date_fin' => $dateFin->format('Y-m-d'),
             'total_quantite' => $totalQuantite,
-            'total_montant' => $totalMontant,
-            'livraisons_count' => $nombreLivraisons,
+            'montant_calcule' => $montantCalcule,
             'montant_paye' => $montantPaye,
-            'montant_en_attente' => $montantEnAttente,
             'statut' => $statut,
             'statut_color' => $statutColor,
             'peut_calculer' => $peutCalculer,
             'est_passe' => $dateFin->isPast(),
+            'paiement' => $paiementExistant,
         ];
     }
 
     /**
-     * Calculate overall statistics from quinzaines data.
+     * Get pending payments for the selected month.
      */
-    private function calculateQuinzainesStats($quinzaines)
+    private function getPaiementsEnAttente($cooperativeId, $month, $year)
     {
-        $stats = [
-            'total_quinzaines' => count($quinzaines),
-            'total_quantite' => 0,
-            'total_montant' => 0,
-            'total_livraisons' => 0,
-            'montant_paye' => 0,
-            'montant_en_attente' => 0,
-            'quinzaines_payees' => 0,
-            'quinzaines_calculees' => 0,
-            'quinzaines_non_calculees' => 0,
-        ];
-
-        foreach ($quinzaines as $quinzaine) {
-            $stats['total_quantite'] += $quinzaine['total_quantite'];
-            $stats['total_montant'] += $quinzaine['total_montant'];
-            $stats['total_livraisons'] += $quinzaine['livraisons_count'];
-            $stats['montant_paye'] += $quinzaine['montant_paye'];
-            $stats['montant_en_attente'] += $quinzaine['montant_en_attente'];
-
-            switch ($quinzaine['statut']) {
-                case 'paye':
-                    $stats['quinzaines_payees']++;
-                    break;
-                case 'calcule':
-                    $stats['quinzaines_calculees']++;
-                    break;
-                case 'non_calcule':
-                    $stats['quinzaines_non_calculees']++;
-                    break;
-            }
-        }
-
-        return $stats;
+        $startOfMonth = Carbon::create($year, $month)->startOfMonth();
+        $endOfMonth = Carbon::create($year, $month)->endOfMonth();
+        
+        return PaiementCooperativeUsine::where('id_cooperative', $cooperativeId)
+            ->where('statut', 'en_attente')
+            ->whereBetween('date_paiement', [$startOfMonth, $endOfMonth])
+            ->orderBy('date_paiement', 'asc')
+            ->get();
     }
 
     /**
-     * Calculate payments for a specific period (every 15 days).
-     * MODIFIÉ : Créer UN SEUL paiement par quinzaine au lieu d'un par livraison
+     * Calculate payments for a quinzaine.
      */
-    public function calculerPeriode(Request $request)
+    public function calculerQuinzaine(Request $request)
     {
         $cooperativeId = $this->getCurrentCooperativeId();
         
         $validated = $request->validate([
-            'periode_debut' => 'required|date',
-            'periode_fin' => 'required|date|after_or_equal:periode_debut',
+            'date_debut' => 'required|date',
+            'date_fin' => 'required|date|after_or_equal:date_debut',
+            'prix_unitaire' => 'required|numeric|min:0.1|max:999.99',
         ], [
-            'periode_debut.required' => 'La date de début est requise',
-            'periode_fin.required' => 'La date de fin est requise',
-            'periode_fin.after_or_equal' => 'La date de fin doit être postérieure ou égale à la date de début',
+            'date_debut.required' => 'La date de début est requise',
+            'date_fin.required' => 'La date de fin est requise',
+            'prix_unitaire.required' => 'Le prix unitaire est requis',
+            'prix_unitaire.numeric' => 'Le prix unitaire doit être un nombre',
         ]);
 
         try {
             DB::beginTransaction();
 
-            $startDate = Carbon::parse($validated['periode_debut']);
-            $endDate = Carbon::parse($validated['periode_fin']);
+            $startDate = Carbon::parse($validated['date_debut']);
+            $endDate = Carbon::parse($validated['date_fin']);
+            $prixUnitaire = $validated['prix_unitaire'];
 
-            // Get validated livraisons for this period
+            // Check if payment already exists
+            $existingPaiement = PaiementCooperativeUsine::where('id_cooperative', $cooperativeId)
+                ->whereBetween('date_paiement', [$startDate, $endDate])
+                ->first();
+            
+            if ($existingPaiement) {
+                return redirect()
+                    ->back()
+                    ->with('info', 'Un paiement a déjà été calculé pour cette quinzaine.');
+            }
+
+            // Get validated livraisons for this quinzaine
             $livraisons = LivraisonUsine::where('id_cooperative', $cooperativeId)
                 ->where('statut', 'validee')
                 ->whereBetween('date_livraison', [$startDate, $endDate])
@@ -261,62 +247,60 @@ class PaiementController extends Controller
             if ($livraisons->isEmpty()) {
                 return redirect()
                     ->back()
-                    ->with('error', 'Aucune livraison validée trouvée pour cette période.');
+                    ->with('error', 'Aucune livraison validée trouvée pour cette quinzaine.');
             }
 
-            // MODIFIÉ : Vérifier si un paiement existe déjà pour cette période
-            $existingPaiement = PaiementCooperativeUsine::where('id_cooperative', $cooperativeId)
-                ->whereBetween('date_paiement', [$startDate, $endDate])
-                ->first();
-            
-            if ($existingPaiement) {
-                return redirect()
-                    ->back()
-                    ->with('info', 'Un paiement a déjà été calculé pour cette période.');
-            }
+            $quantiteTotale = $livraisons->sum('quantite_litres');
 
-            // Calculer le montant total de toutes les livraisons de la période
-            $montantTotal = $livraisons->sum('montant_total');
-            $quantiteTotal = $livraisons->sum('quantite_litres');
-
-            // Créer UN SEUL paiement pour toute la quinzaine
-            $paiement = PaiementCooperativeUsine::create([
-                'id_cooperative' => $cooperativeId,
-                'date_paiement' => $endDate, // Payment date is end of period
-                'montant' => $montantTotal,
-                'statut' => 'en_attente'
-            ]);
+            // Create quinzaine payment
+            $paiement = PaiementCooperativeUsine::creerPaiementQuinzaine(
+                $cooperativeId,
+                $startDate,
+                $endDate,
+                $quantiteTotale,
+                $prixUnitaire
+            );
 
             DB::commit();
 
             return redirect()
-                ->route('gestionnaire.paiements.index')
+                ->back()
                 ->with('success', sprintf(
-                    'Paiement calculé avec succès ! Montant total: %s DH (Quantité: %s L, %d livraison(s))',
-                    number_format($montantTotal, 2),
-                    number_format($quantiteTotal, 2),
-                    $livraisons->count()
+                    'Paiement quinzaine calculé avec succès ! Quantité: %s L - Montant: %s DH',
+                    number_format($quantiteTotale, 2),
+                    number_format($paiement->montant, 2)
                 ));
                 
         } catch (\Exception $e) {
             DB::rollBack();
             
             return back()
-                ->with('error', 'Erreur lors du calcul des paiements: ' . $e->getMessage());
+                ->with('error', 'Erreur lors du calcul: ' . $e->getMessage());
         }
     }
 
     /**
-     * Mark a payment as paid.
+     * Mark a quinzaine payment as paid.
      */
-    public function marquerPaye(PaiementCooperativeUsine $paiement)
+    public function marquerPayeQuinzaine(Request $request)
     {
-        $this->checkAccess($paiement);
+        $cooperativeId = $this->getCurrentCooperativeId();
+        
+        $validated = $request->validate([
+            'paiement_id' => 'required|exists:paiements_cooperative_usine,id_paiement',
+        ]);
+
+        $paiement = PaiementCooperativeUsine::findOrFail($validated['paiement_id']);
+        
+        // Check access
+        if ($paiement->id_cooperative != $cooperativeId) {
+            abort(403, 'Accès non autorisé à ce paiement.');
+        }
         
         if ($paiement->statut !== 'en_attente') {
             return redirect()
                 ->back()
-                ->with('error', 'Ce paiement ne peut pas être marqué comme payé (statut: ' . $paiement->statut_label . ')');
+                ->with('error', 'Ce paiement ne peut pas être marqué comme payé.');
         }
 
         try {
@@ -325,7 +309,8 @@ class PaiementController extends Controller
             return redirect()
                 ->back()
                 ->with('success', sprintf(
-                    'Paiement marqué comme payé ! Montant: %s DH',
+                    'Paiement marqué comme payé ! Quinzaine: %s - Montant: %s DH',
+                    $paiement->quinzaine_label,
                     $paiement->montant_formattee
                 ));
                 
@@ -333,6 +318,69 @@ class PaiementController extends Controller
             return redirect()
                 ->back()
                 ->with('error', 'Erreur lors de la mise à jour: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Download paid quinzaines history as PDF.
+     */
+    public function downloadHistoriqueQuinzaines(Request $request)
+    {
+        $cooperativeId = $this->getCurrentCooperativeId();
+        $cooperative = $this->getCurrentCooperative();
+        
+        $validated = $request->validate([
+            'date_debut' => 'nullable|date',
+            'date_fin' => 'nullable|date|after_or_equal:date_debut',
+        ]);
+
+        try {
+            // Get paid payments (if dates specified, filter by them)
+            $query = PaiementCooperativeUsine::where('id_cooperative', $cooperativeId)
+                ->where('statut', 'paye')
+                ->orderBy('date_paiement', 'desc');
+
+            if (isset($validated['date_debut']) && isset($validated['date_fin'])) {
+                $query->whereBetween('date_paiement', [$validated['date_debut'], $validated['date_fin']]);
+            }
+
+            $paiements = $query->get();
+
+            if ($paiements->isEmpty()) {
+                return redirect()
+                    ->back()
+                    ->with('error', 'Aucune quinzaine payée trouvée pour la période sélectionnée.');
+            }
+
+            // Calculate statistics
+            $stats = [
+                'total_quinzaines' => $paiements->count(),
+                'total_quantite' => $paiements->sum('quantite_litres'),
+                'total_montant' => $paiements->sum('montant'),
+                'prix_moyen' => $paiements->avg('prix_unitaire'),
+                'premiere_quinzaine' => $paiements->last()?->date_paiement,
+                'derniere_quinzaine' => $paiements->first()?->date_paiement,
+            ];
+
+            // Generate PDF
+            $pdf = Pdf::loadView('gestionnaire.paiements.exports.historique-quinzaines-pdf', compact(
+                'cooperative', 
+                'paiements', 
+                'stats'
+            ));
+            
+            $filename = sprintf(
+                'Historique_Quinzaines_%s_%s.pdf',
+                str_replace(' ', '_', $cooperative->nom_cooperative),
+                now()->format('Y-m-d')
+            );
+            
+            return $pdf->download($filename);
+            
+        } catch (\Exception $e) {
+            return redirect()
+                ->back()
+                ->with('error', 'Erreur lors de la génération du PDF: ' . $e->getMessage());
         }
     }
 }

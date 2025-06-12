@@ -32,6 +32,8 @@ class PaiementCooperativeUsine extends Model
         'id_cooperative',
         'date_paiement',
         'montant',
+        'prix_unitaire',
+        'quantite_litres',
         'statut',
     ];
 
@@ -45,6 +47,8 @@ class PaiementCooperativeUsine extends Model
         return [
             'date_paiement' => 'date',
             'montant' => 'decimal:2',
+            'prix_unitaire' => 'decimal:2',
+            'quantite_litres' => 'decimal:2',
             'created_at' => 'datetime',
             'updated_at' => 'datetime',
         ];
@@ -150,6 +154,22 @@ class PaiementCooperativeUsine extends Model
     }
 
     /**
+     * Get formatted quantity.
+     */
+    public function getQuantiteFormatteeAttribute()
+    {
+        return number_format($this->quantite_litres, 2) . ' L';
+    }
+
+    /**
+     * Get formatted unit price.
+     */
+    public function getPrixFormatteeAttribute()
+    {
+        return number_format($this->prix_unitaire, 2) . ' DH/L';
+    }
+
+    /**
      * Get status label in French.
      */
     public function getStatutLabelAttribute()
@@ -174,6 +194,22 @@ class PaiementCooperativeUsine extends Model
     }
 
     /**
+     * Get quinzaine label from date.
+     */
+    public function getQuinzaineLabelAttribute()
+    {
+        $day = $this->date_paiement->day;
+        $month = $this->date_paiement->translatedFormat('F Y');
+        
+        if ($day <= 15) {
+            return "1-15 {$month}";
+        } else {
+            $endDay = $this->date_paiement->endOfMonth()->day;
+            return "16-{$endDay} {$month}";
+        }
+    }
+
+    /**
      * Get total amount by cooperative.
      */
     public static function getTotalByCooperative($cooperativeId, $startDate = null, $endDate = null)
@@ -188,13 +224,41 @@ class PaiementCooperativeUsine extends Model
     }
 
     /**
+     * Create quinzaine payment.
+     */
+    public static function creerPaiementQuinzaine($cooperativeId, $dateDebut, $dateFin, $quantiteTotale, $prixUnitaire)
+    {
+        $montantTotal = $quantiteTotale * $prixUnitaire;
+        
+        return self::create([
+            'id_cooperative' => $cooperativeId,
+            'date_paiement' => $dateFin, // Date de fin de quinzaine
+            'montant' => $montantTotal,
+            'prix_unitaire' => $prixUnitaire,
+            'quantite_litres' => $quantiteTotale,
+            'statut' => 'en_attente'
+        ]);
+    }
+
+    /**
      * Boot the model.
      */
     protected static function boot()
     {
         parent::boot();
 
-        // Removed the creating callback that set payment amount from livraison
-        // since we no longer have the livraison relationship
+        static::creating(function ($paiement) {
+            // Recalculate montant if not set
+            if (!$paiement->montant && $paiement->quantite_litres && $paiement->prix_unitaire) {
+                $paiement->montant = $paiement->quantite_litres * $paiement->prix_unitaire;
+            }
+        });
+
+        static::updating(function ($paiement) {
+            // Recalculate montant if quantity or price changed
+            if ($paiement->isDirty(['quantite_litres', 'prix_unitaire'])) {
+                $paiement->montant = $paiement->quantite_litres * $paiement->prix_unitaire;
+            }
+        });
     }
 }
