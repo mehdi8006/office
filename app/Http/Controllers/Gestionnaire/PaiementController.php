@@ -63,16 +63,12 @@ class PaiementController extends Controller
     }
 
     /**
-     * Display quinzaines with their payment status.
+     * Display current quinzaine with payment status.
      */
     public function index(Request $request)
     {
         $cooperativeId = $this->getCurrentCooperativeId();
         $cooperative = $this->getCurrentCooperative();
-        
-        // Get selected month/year or default to current month
-        $selectedMonth = $request->get('mois', now()->month);
-        $selectedYear = $request->get('annee', now()->year);
         
         // Calculate prix unitaire (dernière valeur utilisée ou défaut)
         $dernierPrix = PaiementCooperativeUsine::where('id_cooperative', $cooperativeId)
@@ -80,59 +76,55 @@ class PaiementController extends Controller
             ->value('prix_unitaire');
         $prixUnitaire = $dernierPrix ?? self::PRIX_UNITAIRE_DEFAULT;
         
-        // Calculate quinzaines data for the selected month
-        $quinzaines = $this->getQuinzainesData($cooperativeId, $selectedMonth, $selectedYear, $prixUnitaire);
+        // Get current quinzaine data
+        $quinzaineActuelle = $this->getCurrentQuinzaineData($cooperativeId, $prixUnitaire);
         
-        // Get pending payments (quinzaines en attente)
-        $paiementsEnAttente = $this->getPaiementsEnAttente($cooperativeId, $selectedMonth, $selectedYear);
+        // Get all pending payments (toutes les quinzaines en attente, pas seulement le mois actuel)
+        $paiementsEnAttente = $this->getAllPaiementsEnAttente($cooperativeId);
         
         return view('gestionnaire.paiements.index', compact(
-            'quinzaines', 
+            'quinzaineActuelle', 
             'paiementsEnAttente',
             'cooperative', 
-            'prixUnitaire',
-            'selectedMonth', 
-            'selectedYear'
+            'prixUnitaire'
         ));
     }
 
     /**
-     * Calculate quinzaines data for a specific month/year.
+     * Determine current quinzaine and return its data.
      */
-    private function getQuinzainesData($cooperativeId, $month, $year, $prixUnitaire)
+    private function getCurrentQuinzaineData($cooperativeId, $prixUnitaire)
     {
-        $quinzaines = [];
-        $date = Carbon::create($year, $month);
+        $today = now();
+        $currentDay = $today->day;
         
-        // Quinzaine 1: 1-15
-        $debut1 = $date->copy()->startOfMonth();
-        $fin1 = $date->copy()->startOfMonth()->addDays(14);
-        $quinzaines[] = $this->calculateQuinzaineData(
+        // Determine current quinzaine
+        if ($currentDay <= 15) {
+            // Quinzaine 1: 1-15
+            $dateDebut = $today->copy()->startOfMonth();
+            $dateFin = $today->copy()->startOfMonth()->addDays(14);
+            $label = "1-15 " . $today->translatedFormat('F Y');
+        } else {
+            // Quinzaine 2: 16-fin du mois
+            $dateDebut = $today->copy()->startOfMonth()->addDays(15);
+            $dateFin = $today->copy()->endOfMonth();
+            $label = "16-" . $dateFin->day . " " . $today->translatedFormat('F Y');
+        }
+        
+        return $this->calculateQuinzaineData(
             $cooperativeId,
-            $debut1,
-            $fin1,
-            "1-15 " . $date->translatedFormat('F Y'),
-            $prixUnitaire
+            $dateDebut,
+            $dateFin,
+            $label,
+            $prixUnitaire,
+            true // isCurrentQuinzaine
         );
-        
-        // Quinzaine 2: 16-fin du mois
-        $debut2 = $date->copy()->startOfMonth()->addDays(15);
-        $fin2 = $date->copy()->endOfMonth();
-        $quinzaines[] = $this->calculateQuinzaineData(
-            $cooperativeId,
-            $debut2,
-            $fin2,
-            "16-" . $fin2->day . " " . $date->translatedFormat('F Y'),
-            $prixUnitaire
-        );
-        
-        return $quinzaines;
     }
 
     /**
      * Calculate data for a specific quinzaine.
      */
-    private function calculateQuinzaineData($cooperativeId, $dateDebut, $dateFin, $label, $prixUnitaire)
+    private function calculateQuinzaineData($cooperativeId, $dateDebut, $dateFin, $label, $prixUnitaire, $isCurrentQuinzaine = false)
     {
         // Get validated livraisons for this period
         $livraisons = LivraisonUsine::where('id_cooperative', $cooperativeId)
@@ -149,10 +141,12 @@ class PaiementController extends Controller
             ->first();
 
         // Determine status
+        $estTerminee = $dateFin->isPast();
         $statut = 'non_calcule';
         $statutColor = 'secondary';
         $peutCalculer = false;
         $montantPaye = 0;
+        $messageSpecial = null;
 
         if ($paiementExistant) {
             $montantCalcule = $paiementExistant->montant;
@@ -165,7 +159,13 @@ class PaiementController extends Controller
                 $statutColor = 'warning';
             }
         } else {
-            if ($totalQuantite > 0 && $dateFin->isPast()) {
+            if ($isCurrentQuinzaine && !$estTerminee) {
+                // Quinzaine actuelle en cours
+                $statut = 'en_cours';
+                $statutColor = 'info';
+                $messageSpecial = 'Période pas finie';
+            } elseif ($totalQuantite > 0 && $estTerminee) {
+                // Quinzaine terminée avec des livraisons, peut être calculée
                 $statut = 'non_calcule';
                 $statutColor = 'danger';
                 $peutCalculer = true;
@@ -182,28 +182,26 @@ class PaiementController extends Controller
             'statut' => $statut,
             'statut_color' => $statutColor,
             'peut_calculer' => $peutCalculer,
-            'est_passe' => $dateFin->isPast(),
+            'est_terminee' => $estTerminee,
+            'est_en_cours' => $isCurrentQuinzaine && !$estTerminee,
+            'message_special' => $messageSpecial,
             'paiement' => $paiementExistant,
         ];
     }
 
     /**
-     * Get pending payments for the selected month.
+     * Get all pending payments (from all months).
      */
-    private function getPaiementsEnAttente($cooperativeId, $month, $year)
+    private function getAllPaiementsEnAttente($cooperativeId)
     {
-        $startOfMonth = Carbon::create($year, $month)->startOfMonth();
-        $endOfMonth = Carbon::create($year, $month)->endOfMonth();
-        
         return PaiementCooperativeUsine::where('id_cooperative', $cooperativeId)
             ->where('statut', 'en_attente')
-            ->whereBetween('date_paiement', [$startOfMonth, $endOfMonth])
-            ->orderBy('date_paiement', 'asc')
+            ->orderBy('date_paiement', 'desc')
             ->get();
     }
 
     /**
-     * Calculate payments for a quinzaine.
+     * Calculate payments for a quinzaine (ONLY action available to gestionnaire).
      */
     public function calculerQuinzaine(Request $request)
     {
@@ -236,6 +234,13 @@ class PaiementController extends Controller
                 return redirect()
                     ->back()
                     ->with('info', 'Un paiement a déjà été calculé pour cette quinzaine.');
+            }
+
+            // Verify quinzaine is finished
+            if ($endDate->isFuture()) {
+                return redirect()
+                    ->back()
+                    ->with('error', 'Impossible de calculer une quinzaine en cours. Attendez la fin de la période.');
             }
 
             // Get validated livraisons for this quinzaine
@@ -276,48 +281,6 @@ class PaiementController extends Controller
             
             return back()
                 ->with('error', 'Erreur lors du calcul: ' . $e->getMessage());
-        }
-    }
-
-    /**
-     * Mark a quinzaine payment as paid.
-     */
-    public function marquerPayeQuinzaine(Request $request)
-    {
-        $cooperativeId = $this->getCurrentCooperativeId();
-        
-        $validated = $request->validate([
-            'paiement_id' => 'required|exists:paiements_cooperative_usine,id_paiement',
-        ]);
-
-        $paiement = PaiementCooperativeUsine::findOrFail($validated['paiement_id']);
-        
-        // Check access
-        if ($paiement->id_cooperative != $cooperativeId) {
-            abort(403, 'Accès non autorisé à ce paiement.');
-        }
-        
-        if ($paiement->statut !== 'en_attente') {
-            return redirect()
-                ->back()
-                ->with('error', 'Ce paiement ne peut pas être marqué comme payé.');
-        }
-
-        try {
-            $paiement->marquerPaye();
-            
-            return redirect()
-                ->back()
-                ->with('success', sprintf(
-                    'Paiement marqué comme payé ! Quinzaine: %s - Montant: %s DH',
-                    $paiement->quinzaine_label,
-                    $paiement->montant_formattee
-                ));
-                
-        } catch (\Exception $e) {
-            return redirect()
-                ->back()
-                ->with('error', 'Erreur lors de la mise à jour: ' . $e->getMessage());
         }
     }
 

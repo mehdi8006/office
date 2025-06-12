@@ -1,7 +1,7 @@
 @extends('gestionnaire.layouts.app')
 
 @section('title', 'Gestion des Paiements Usine')
-@section('page-title', 'Paiements Usine - ' . \Carbon\Carbon::create($selectedYear, $selectedMonth)->translatedFormat('F Y'))
+@section('page-title', 'Paiements Usine - Quinzaine Actuelle')
 
 @section('page-actions')
     <div class="btn-group">
@@ -15,57 +15,26 @@
 @endsection
 
 @section('content')
-<!-- Sélection du mois -->
-<div class="card mb-4">
-    <div class="card-header">
-        <div class="d-flex justify-content-between align-items-center">
-            <h5 class="card-title mb-0">
-                <i class="fas fa-calendar me-2"></i>Sélection du Mois
-            </h5>
-            <div class="d-flex align-items-center">
-                <span class="text-muted me-2">Coopérative :</span>
-                <span class="badge bg-primary fs-6">{{ $cooperative->nom_cooperative }}</span>
+<!-- Info Coopérative -->
+<div class="row mb-4">
+    <div class="col-lg-6">
+        <div class="card border-primary">
+            <div class="card-header bg-primary text-white">
+                <h6 class="card-title mb-0">
+                    <i class="fas fa-building me-2"></i>Coopérative
+                </h6>
+            </div>
+            <div class="card-body">
+                <h5 class="text-primary mb-2">{{ $cooperative->nom_cooperative }}</h5>
+                <p class="text-muted mb-1"><strong>Matricule :</strong> {{ $cooperative->matricule }}</p>
+                <p class="text-muted mb-0"><strong>Gestionnaire :</strong> {{ auth()->user()->nom_complet }}</p>
             </div>
         </div>
     </div>
-    <div class="card-body">
-        <form method="GET" action="{{ route('gestionnaire.paiements.index') }}" class="row g-3">
-            <div class="col-md-6">
-                <label for="mois" class="form-label">Mois</label>
-                <select class="form-select" id="mois" name="mois">
-                    @for($m = 1; $m <= 12; $m++)
-                        <option value="{{ $m }}" {{ $selectedMonth == $m ? 'selected' : '' }}>
-                            {{ \Carbon\Carbon::create()->month($m)->translatedFormat('F') }}
-                        </option>
-                    @endfor
-                </select>
-            </div>
-            <div class="col-md-6">
-                <label for="annee" class="form-label">Année</label>
-                <select class="form-select" id="annee" name="annee">
-                    @for($y = now()->year; $y >= now()->year - 2; $y--)
-                        <option value="{{ $y }}" {{ $selectedYear == $y ? 'selected' : '' }}>
-                            {{ $y }}
-                        </option>
-                    @endfor
-                </select>
-            </div>
-            <div class="col-12">
-                <button type="submit" class="btn btn-primary">
-                    <i class="fas fa-search me-1"></i>Afficher
-                </button>
-                <a href="{{ route('gestionnaire.paiements.index') }}" class="btn btn-outline-secondary ms-2">
-                    <i class="fas fa-calendar me-1"></i>Mois Actuel
-                </a>
-            </div>
-        </form>
-    </div>
-</div>
 
-<!-- Carte Prix Unitaire -->
-<div class="row mb-4">
-    <div class="col-lg-4 mb-4">
-        <div class="card border-info h-100">
+    <!-- Prix Unitaire -->
+    <div class="col-lg-6">
+        <div class="card border-info">
             <div class="card-header bg-info text-white">
                 <h6 class="card-title mb-0">
                     <i class="fas fa-coins me-2"></i>Prix Unitaire Actuel
@@ -78,111 +47,136 @@
             </div>
         </div>
     </div>
+</div>
 
-    <!-- Cartes Quinzaines -->
-    @foreach($quinzaines as $index => $quinzaine)
-        <div class="col-lg-4 mb-4">
-            <div class="card border-{{ $quinzaine['statut_color'] }} h-100">
-                <div class="card-header bg-{{ $quinzaine['statut_color'] }} bg-opacity-10">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <h6 class="card-title mb-0">
-                            <i class="fas fa-calendar me-2"></i>{{ $quinzaine['label'] }}
-                        </h6>
-                        <span class="badge bg-{{ $quinzaine['statut_color'] }}">
-                            @switch($quinzaine['statut'])
-                                @case('non_calcule')
-                                    Non Calculé
-                                    @break
-                                @case('en_attente')
-                                    En Attente
-                                    @break
-                                @case('paye')
-                                    Payé
-                                    @break
-                            @endswitch
-                        </span>
-                    </div>
+<!-- Quinzaine Actuelle -->
+<div class="row mb-4">
+    <div class="col-lg-8 mx-auto">
+        <div class="card border-{{ $quinzaineActuelle['statut_color'] }} quinzaine-card">
+            <div class="card-header bg-{{ $quinzaineActuelle['statut_color'] }} bg-opacity-10">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-calendar me-2"></i>{{ $quinzaineActuelle['label'] }}
+                    </h5>
+                    <span class="badge bg-{{ $quinzaineActuelle['statut_color'] }} fs-6">
+                        @switch($quinzaineActuelle['statut'])
+                            @case('en_cours')
+                                En Cours
+                                @break
+                            @case('non_calcule')
+                                Non Calculé
+                                @break
+                            @case('en_attente')
+                                En Attente de Paiement
+                                @break
+                            @case('paye')
+                                Payé
+                                @break
+                        @endswitch
+                    </span>
                 </div>
-                
-                <div class="card-body">
-                    @if($quinzaine['total_quantite'] > 0)
-                        <!-- Quantité -->
+            </div>
+            
+            <div class="card-body">
+                @if($quinzaineActuelle['total_quantite'] > 0)
+                    <!-- Quantité -->
+                    <div class="text-center mb-3">
+                        <h3 class="text-primary mb-1">{{ number_format($quinzaineActuelle['total_quantite'], 1) }} L</h3>
+                        <small class="text-muted">Quantité livrée (validée)</small>
+                    </div>
+
+                    <!-- Montant -->
+                    @if($quinzaineActuelle['statut'] !== 'non_calcule' && $quinzaineActuelle['statut'] !== 'en_cours')
                         <div class="text-center mb-3">
-                            <h4 class="text-primary mb-1">{{ number_format($quinzaine['total_quantite'], 1) }} L</h4>
-                            <small class="text-muted">Quantité livrée</small>
-                        </div>
-
-                        <!-- Montant -->
-                        @if($quinzaine['statut'] !== 'non_calcule')
-                            <div class="text-center mb-3">
-                                <div class="bg-light p-3 rounded">
-                                    <h4 class="text-success mb-1">{{ number_format($quinzaine['montant_calcule'], 2) }} DH</h4>
-                                    <small class="text-muted">Montant calculé</small>
-                                </div>
+                            <div class="bg-light p-3 rounded">
+                                <h3 class="text-success mb-1">{{ number_format($quinzaineActuelle['montant_calcule'], 2) }} DH</h3>
+                                <small class="text-muted">Montant calculé</small>
                             </div>
-                        @endif
-
-                        <!-- Actions -->
-                        <div class="text-center">
-                            @if($quinzaine['peut_calculer'])
-                                <button type="button" 
-                                        class="btn btn-warning"
-                                        data-bs-toggle="modal" 
-                                        data-bs-target="#calculerModal"
-                                        data-debut="{{ $quinzaine['date_debut'] }}"
-                                        data-fin="{{ $quinzaine['date_fin'] }}"
-                                        data-label="{{ $quinzaine['label'] }}"
-                                        data-quantite="{{ $quinzaine['total_quantite'] }}">
-                                    <i class="fas fa-calculator me-1"></i>Calculer
-                                </button>
-                            @elseif($quinzaine['statut'] === 'en_attente')
-                                <form action="{{ route('gestionnaire.paiements.marquer-paye-quinzaine') }}" 
-                                      method="POST" 
-                                      style="display: inline;">
-                                    @csrf
-                                    <input type="hidden" name="paiement_id" value="{{ $quinzaine['paiement']->id_paiement }}">
-                                    <button type="submit" 
-                                            class="btn btn-success"
-                                            onclick="return confirm('Marquer cette quinzaine comme payée ?\n\nMontant: {{ number_format($quinzaine['montant_calcule'], 2) }} DH')">
-                                        <i class="fas fa-check me-1"></i>Marquer Payé
-                                    </button>
-                                </form>
-                            @elseif($quinzaine['statut'] === 'paye')
-                                <span class="text-success">
-                                    <i class="fas fa-check-circle me-1"></i>Payé le {{ $quinzaine['paiement']->date_paiement->format('d/m/Y') }}
-                                </span>
-                            @endif
-                        </div>
-                    @else
-                        <!-- Aucune livraison -->
-                        <div class="text-center text-muted py-3">
-                            <i class="fas fa-truck" style="font-size: 2rem; opacity: 0.3;"></i>
-                            <p class="mt-2 mb-0">Aucune livraison pour cette quinzaine</p>
                         </div>
                     @endif
-                </div>
 
-                <!-- Footer avec dates -->
-                <div class="card-footer bg-light">
-                    <small class="text-muted">
-                        <i class="fas fa-calendar-alt me-1"></i>
-                        {{ \Carbon\Carbon::parse($quinzaine['date_debut'])->format('d/m/Y') }} - 
-                        {{ \Carbon\Carbon::parse($quinzaine['date_fin'])->format('d/m/Y') }}
-                    </small>
+                    <!-- Message spécial ou Actions -->
+                    <div class="text-center">
+                        @if($quinzaineActuelle['est_en_cours'])
+                            <!-- Période en cours -->
+                            <div class="alert alert-info">
+                                <i class="fas fa-clock me-2"></i>
+                                <strong>Quinzaine en cours</strong>
+                                <br>
+                                <small>{{ $quinzaineActuelle['message_special'] }}</small>
+                            </div>
+                        @elseif($quinzaineActuelle['peut_calculer'])
+                            <!-- Peut calculer -->
+                            <button type="button" 
+                                    class="btn btn-warning"
+                                    data-bs-toggle="modal" 
+                                    data-bs-target="#calculerModal"
+                                    data-debut="{{ $quinzaineActuelle['date_debut'] }}"
+                                    data-fin="{{ $quinzaineActuelle['date_fin'] }}"
+                                    data-label="{{ $quinzaineActuelle['label'] }}"
+                                    data-quantite="{{ $quinzaineActuelle['total_quantite'] }}">
+                                <i class="fas fa-calculator me-1"></i>Calculer Paiement
+                            </button>
+                        @elseif($quinzaineActuelle['statut'] === 'en_attente')
+                            <!-- En attente de paiement -->
+                            <div class="alert alert-warning">
+                                <i class="fas fa-hourglass-half me-2"></i>
+                                <strong>Paiement calculé</strong>
+                                <br>
+                                <small>En attente de validation par la direction</small>
+                            </div>
+                        @elseif($quinzaineActuelle['statut'] === 'paye')
+                            <!-- Déjà payé -->
+                            <div class="alert alert-success">
+                                <i class="fas fa-check-circle me-2"></i>
+                                <strong>Paiement effectué</strong>
+                                <br>
+                                <small>Payé le {{ $quinzaineActuelle['paiement']->date_paiement->format('d/m/Y') }}</small>
+                            </div>
+                        @endif
+                    </div>
+                @else
+                    <!-- Aucune livraison -->
+                    <div class="text-center text-muted py-4">
+                        <i class="fas fa-truck" style="font-size: 3rem; opacity: 0.3;"></i>
+                        <h5 class="mt-3 mb-2">Aucune livraison</h5>
+                        <p class="mb-0">Aucune livraison validée pour cette quinzaine</p>
+                    </div>
+                @endif
+            </div>
+
+            <!-- Footer avec dates -->
+            <div class="card-footer bg-light">
+                <div class="row">
+                    <div class="col">
+                        <small class="text-muted">
+                            <i class="fas fa-calendar-alt me-1"></i>
+                            {{ \Carbon\Carbon::parse($quinzaineActuelle['date_debut'])->format('d/m/Y') }} - 
+                            {{ \Carbon\Carbon::parse($quinzaineActuelle['date_fin'])->format('d/m/Y') }}
+                        </small>
+                    </div>
+                    <div class="col-auto">
+                        @if($quinzaineActuelle['est_terminee'])
+                            <span class="badge bg-secondary">Terminée</span>
+                        @else
+                            <span class="badge bg-info">En cours</span>
+                        @endif
+                    </div>
                 </div>
             </div>
         </div>
-    @endforeach
+    </div>
 </div>
 
-<!-- Tableau des Paiements en Attente -->
+<!-- Tableau des Paiements en Attente (Lecture seule) -->
 @if($paiementsEnAttente->count() > 0)
-<div class="card mb-4">
+<div class="card">
     <div class="card-header">
         <h5 class="card-title mb-0">
             <i class="fas fa-clock me-2 text-warning"></i>
-            Paiements en Attente ({{ $paiementsEnAttente->count() }})
+            Paiements en Attente de Validation ({{ $paiementsEnAttente->count() }})
         </h5>
+        <small class="text-muted">Ces paiements ont été calculés et attendent la validation de la direction</small>
     </div>
     <div class="card-body p-0">
         <div class="table-responsive">
@@ -194,7 +188,7 @@
                         <th>Prix Unitaire</th>
                         <th>Montant Total</th>
                         <th>Date Calcul</th>
-                        <th width="150px">Actions</th>
+                        <th>Statut</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -216,23 +210,41 @@
                                 {{ $paiement->created_at->format('d/m/Y H:i') }}
                             </td>
                             <td>
-                                <form action="{{ route('gestionnaire.paiements.marquer-paye-quinzaine') }}" 
-                                      method="POST" 
-                                      style="display: inline;">
-                                    @csrf
-                                    <input type="hidden" name="paiement_id" value="{{ $paiement->id_paiement }}">
-                                    <button type="submit" 
-                                            class="btn btn-sm btn-success"
-                                            onclick="return confirm('Marquer comme payé ?\n\nQuinzaine: {{ $paiement->quinzaine_label }}\nMontant: {{ $paiement->montant_formattee }}')">
-                                        <i class="fas fa-check me-1"></i>Marquer Payé
-                                    </button>
-                                </form>
+                                <span class="badge bg-{{ $paiement->statut_color }}">
+                                    {{ $paiement->statut_label }}
+                                </span>
                             </td>
                         </tr>
                     @endforeach
                 </tbody>
+                <tfoot class="table-light">
+                    <tr>
+                        <th>Total</th>
+                        <th>
+                            <span class="badge bg-primary">
+                                {{ number_format($paiementsEnAttente->sum('quantite_litres'), 2) }} L
+                            </span>
+                        </th>
+                        <th>-</th>
+                        <th>
+                            <strong class="text-success">
+                                {{ number_format($paiementsEnAttente->sum('montant'), 2) }} DH
+                            </strong>
+                        </th>
+                        <th>-</th>
+                        <th>-</th>
+                    </tr>
+                </tfoot>
             </table>
         </div>
+    </div>
+</div>
+@else
+<div class="card">
+    <div class="card-body text-center py-4">
+        <i class="fas fa-check-circle text-success" style="font-size: 3rem; opacity: 0.5;"></i>
+        <h5 class="mt-3 text-muted">Aucun paiement en attente</h5>
+        <p class="text-muted mb-0">Tous les paiements calculés ont été traités</p>
     </div>
 </div>
 @endif
@@ -290,6 +302,11 @@
                             <strong id="montant_calc">0.00 DH</strong>
                         </div>
                     </div>
+
+                    <div class="alert alert-warning mt-3">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <strong>Note :</strong> Une fois calculé, le paiement sera en attente de validation par la direction.
+                    </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
@@ -319,6 +336,22 @@
     transform: translateY(-2px);
     box-shadow: 0 4px 15px rgba(0,0,0,0.1);
 }
+
+.alert {
+    border: none;
+    border-radius: 8px;
+}
+
+.card {
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+.table th {
+    border-top: none;
+    font-weight: 600;
+    color: #495057;
+}
 </style>
 @endpush
 
@@ -330,29 +363,31 @@ document.addEventListener('DOMContentLoaded', function() {
     const prixInput = document.getElementById('prix_unitaire');
     let currentQuantite = 0;
 
-    calculerModal.addEventListener('show.bs.modal', function (event) {
-        const button = event.relatedTarget;
-        
-        // Get data from button
-        const dateDebut = button.getAttribute('data-debut');
-        const dateFin = button.getAttribute('data-fin');
-        const label = button.getAttribute('data-label');
-        const quantite = parseFloat(button.getAttribute('data-quantite'));
-        
-        currentQuantite = quantite;
-        
-        // Update modal content
-        document.getElementById('modal_date_debut').value = dateDebut;
-        document.getElementById('modal_date_fin').value = dateFin;
-        document.getElementById('modal_periode').textContent = label;
-        document.getElementById('modal_quantite').textContent = quantite.toFixed(1);
-        
-        // Update calcul
-        updateCalcul();
-    });
+    if (calculerModal) {
+        calculerModal.addEventListener('show.bs.modal', function (event) {
+            const button = event.relatedTarget;
+            
+            // Get data from button
+            const dateDebut = button.getAttribute('data-debut');
+            const dateFin = button.getAttribute('data-fin');
+            const label = button.getAttribute('data-label');
+            const quantite = parseFloat(button.getAttribute('data-quantite'));
+            
+            currentQuantite = quantite;
+            
+            // Update modal content
+            document.getElementById('modal_date_debut').value = dateDebut;
+            document.getElementById('modal_date_fin').value = dateFin;
+            document.getElementById('modal_periode').textContent = label;
+            document.getElementById('modal_quantite').textContent = quantite.toFixed(1);
+            
+            // Update calcul
+            updateCalcul();
+        });
 
-    // Update calculation when price changes
-    prixInput.addEventListener('input', updateCalcul);
+        // Update calculation when price changes
+        prixInput.addEventListener('input', updateCalcul);
+    }
 
     function updateCalcul() {
         const prix = parseFloat(prixInput.value) || 0;
