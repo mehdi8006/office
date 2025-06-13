@@ -19,35 +19,131 @@
             background-color: #f8f9fa;
         }
 
-        .sidebar {
-            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
-            min-height: 100vh;
-            box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+        /* Header */
+        .main-header {
+            background: white;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1040;
+            height: 60px;
         }
 
-        .sidebar .nav-link {
-            color: rgba(255,255,255,0.8);
-            transition: all 0.3s ease;
-            border-radius: 8px;
-            margin: 2px 0;
-        }
-
-        .sidebar .nav-link:hover,
-        .sidebar .nav-link.active {
-            color: white;
-            background: rgba(255,255,255,0.2);
-            transform: translateX(5px);
-        }
-
-        .main-content {
-            padding: 20px;
-        }
-
-        .navbar-brand {
+        .main-header .navbar-brand {
             font-weight: 700;
             color: #28a745 !important;
+            font-size: 1.5rem;
         }
 
+        /* Sidebar Desktop */
+        .sidebar-desktop {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            position: fixed;
+            top: 60px;
+            left: 0;
+            width: 250px;
+            height: calc(100vh - 60px);
+            box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+            z-index: 1030;
+            overflow-y: auto;
+        }
+
+        /* Sidebar Mobile (Offcanvas) */
+        .sidebar-mobile {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            width: 280px;
+        }
+
+        /* Navigation Links */
+        .sidebar-nav .nav-link {
+            color: rgba(255,255,255,0.85);
+            transition: all 0.3s ease;
+            border-radius: 8px;
+            margin: 2px 8px;
+            padding: 12px 16px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+        }
+
+        .sidebar-nav .nav-link:hover {
+            color: white;
+            background: rgba(255,255,255,0.15);
+            transform: translateX(3px);
+        }
+
+        .sidebar-nav .nav-link.active {
+            color: white;
+            background: rgba(255,255,255,0.25);
+            font-weight: 600;
+        }
+
+        .sidebar-nav .nav-link i {
+            width: 20px;
+            text-align: center;
+            margin-right: 12px;
+            font-size: 1rem;
+        }
+
+        /* Logo Section */
+        .sidebar-logo {
+            padding: 20px;
+            text-align: center;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            margin-bottom: 20px;
+        }
+
+        .sidebar-logo h4 {
+            color: white;
+            font-weight: 700;
+            margin: 0;
+            font-size: 1.5rem;
+        }
+
+        .sidebar-logo small {
+            color: rgba(255,255,255,0.7);
+            font-size: 0.85rem;
+        }
+
+        /* Main Content */
+        .main-content {
+            margin-top: 60px;
+            margin-left: 0;
+            padding: 20px;
+            min-height: calc(100vh - 60px);
+            transition: margin-left 0.3s ease;
+        }
+
+        /* Desktop Layout */
+        @media (min-width: 992px) {
+            .main-content {
+                margin-left: 250px;
+            }
+            
+            .sidebar-desktop {
+                display: block !important;
+            }
+            
+            .mobile-toggle-btn {
+                display: none !important;
+            }
+        }
+
+        /* Mobile Layout */
+        @media (max-width: 991.98px) {
+            .sidebar-desktop {
+                display: none !important;
+            }
+            
+            .main-content {
+                margin-left: 0;
+                padding: 15px;
+            }
+        }
+
+        /* Cards and Components */
         .card {
             border: none;
             box-shadow: 0 2px 10px rgba(0,0,0,0.08);
@@ -90,161 +186,340 @@
 
         .toast-container {
             position: fixed;
-            top: 20px;
+            top: 80px;
             right: 20px;
             z-index: 1050;
         }
 
-        @media (max-width: 768px) {
-            .sidebar {
-                min-height: auto;
-            }
-            
-            .main-content {
-                padding: 15px;
-            }
+        /* Page Header */
+        .page-header {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+
+        .page-header h1 {
+            margin: 0;
+            color: #2c3e50;
+            font-weight: 600;
+        }
+
+        /* Logout Button */
+        .logout-btn {
+            color: rgba(255,255,255,0.85) !important;
+            border: 1px solid rgba(255,255,255,0.2);
+            background: transparent;
+            transition: all 0.3s ease;
+        }
+
+        .logout-btn:hover {
+            color: white !important;
+            background: rgba(220, 53, 69, 0.2);
+            border-color: rgba(220, 53, 69, 0.5);
+        }
+
+        /* Scrollbar for sidebar */
+        .sidebar-desktop::-webkit-scrollbar,
+        .sidebar-mobile::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .sidebar-desktop::-webkit-scrollbar-track,
+        .sidebar-mobile::-webkit-scrollbar-track {
+            background: rgba(255,255,255,0.1);
+        }
+
+        .sidebar-desktop::-webkit-scrollbar-thumb,
+        .sidebar-mobile::-webkit-scrollbar-thumb {
+            background: rgba(255,255,255,0.3);
+            border-radius: 3px;
+        }
+
+        .sidebar-desktop::-webkit-scrollbar-thumb:hover,
+        .sidebar-mobile::-webkit-scrollbar-thumb:hover {
+            background: rgba(255,255,255,0.5);
         }
     </style>
     
     @stack('styles')
 </head>
 <body>
-    <div class="container-fluid">
-        <div class="row">
-            <!-- Sidebar -->
-            <nav class="col-md-3 col-lg-2 d-md-block sidebar collapse">
-                <div class="position-sticky pt-3">
-                    <!-- Logo -->
-                    <div class="text-center mb-4">
-                        <div class="d-flex align-items-center justify-content-center">
-                            <i class="fas fa-seedling text-white me-2" style="font-size: 1.5rem;"></i>
-                            <h4 class="text-white mb-0">SGCCL</h4>
-                        </div>
-                        
-                        <small class="text-white-50">Gestionnaire</small>
-                        
-                    </div>
+    <!-- Header -->
+    <header class="main-header">
+        <nav class="navbar navbar-expand-lg navbar-light h-100">
+            <div class="container-fluid">
+                <!-- Mobile Toggle Button -->
+                <button class="btn btn-outline-success mobile-toggle-btn d-lg-none me-3" 
+                        type="button" 
+                        data-bs-toggle="offcanvas" 
+                        data-bs-target="#sidebarMobile">
+                    <i class="fas fa-bars"></i>
+                </button>
 
-                    <!-- Navigation -->
-                    <ul class="nav flex-column">
-                        <li class="nav-item">
-                            <a class="nav-link {{ request()->routeIs('gestionnaire.dashboard') ? 'active' : '' }}" 
-                               href="{{ route('gestionnaire.dashboard') }}">
-                                <i class="fas fa-tachometer-alt me-2"></i>
-                                Tableau de bord
-                            </a>
-                        </li>
-                        
-                        <li class="nav-item">
-                            <a class="nav-link {{ request()->routeIs('gestionnaire.membres.*') ? 'active' : '' }}" 
-                               href="{{ route('gestionnaire.membres.index') }}">
-                                <i class="fas fa-users me-2"></i>
-                                Membres Éleveurs
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link {{ request()->routeIs('gestionnaire.receptions.*') ? 'active' : '' }}" 
-                               href="{{ route('gestionnaire.receptions.index') }}">
-                                <i class="fas fa-tint me-2"></i>
-                                Réceptions de Lait
-                            </a>
-                        </li>
-                        
-                        <li class="nav-item">
-                            <a class="nav-link {{ request()->routeIs('gestionnaire.stock.*') ? 'active' : '' }}" 
-                               href="{{ route('gestionnaire.stock.index') }}">
-                                <i class="fas fa-warehouse me-2"></i>
-                                Gestion du Stock
-                            </a>
-                        </li>
-                        
-                        <li class="nav-item">
-                            <a class="nav-link {{ request()->routeIs('gestionnaire.livraisons.*') ? 'active' : '' }}" 
-                               href="{{ route('gestionnaire.livraisons.index') }}">
-                                <i class="fas fa-truck me-2"></i>
-                                Livraisons Usine
-                            </a>
-                        </li>
-                        
-                        <li class="nav-item">
-                            <a class="nav-link {{ request()->routeIs('gestionnaire.paiements.*') ? 'active' : '' }}" 
-                               href="{{ route('gestionnaire.paiements.index') }}">
-                                <i class="fas fa-money-bill me-2"></i>
-                                Paiements Usine
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link {{ request()->routeIs('gestionnaire.paiements-eleveurs.*') ? 'active' : '' }}" 
-                               href="{{ route('gestionnaire.paiements-eleveurs.index') }}">
-                                <i class="fas fa-hand-holding-usd me-2"></i>
-                                Paiements Éleveurs
-                            </a>
-                        </li>
+                <!-- Brand -->
+                <a class="navbar-brand d-flex align-items-center" href="{{ route('gestionnaire.dashboard') }}">
+                    
+                    SGCCL
+                </a>
 
-                        <hr class="text-white-50">
-
-                        <hr class="text-white-50">
-                        
-                        <li class="nav-item">
-                            <form method="POST" action="{{ route('logout') }}" class="d-inline">
-                                @csrf
-                                <button type="submit" class="nav-link border-0 bg-transparent w-100 text-start">
-                                    <i class="fas fa-sign-out-alt me-2"></i>
-                                    Déconnexion
-                                </button>
-                            </form>
-                        </li>
-                    </ul>
-                </div>
-            </nav>
-
-            <!-- Main content -->
-            <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4 main-content">
-                <!-- Top navbar -->
-                <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
-                    <h1 class="h2">@yield('page-title', 'Dashboard')</h1>
-                    <div class="btn-toolbar mb-2 mb-md-0">
-                        <div class="btn-group me-2">
-                            @yield('page-actions')
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Alerts -->
-                @if(session('success'))
-                    <div class="alert alert-success alert-dismissible fade show" role="alert">
-                        <i class="fas fa-check-circle me-2"></i>
-                        {{ session('success') }}
-                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                    </div>
-                @endif
-
-                @if(session('error'))
-                    <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                        <i class="fas fa-exclamation-circle me-2"></i>
-                        {{ session('error') }}
-                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                    </div>
-                @endif
-
-                @if($errors->any())
-                    <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                        <i class="fas fa-exclamation-triangle me-2"></i>
-                        <strong>Erreurs détectées :</strong>
-                        <ul class="mb-0 mt-2">
-                            @foreach($errors->all() as $error)
-                                <li>{{ $error }}</li>
-                            @endforeach
+                <!-- User Info -->
+                <div class="navbar-nav ms-auto">
+                    <div class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" 
+                           id="userDropdown" role="button" data-bs-toggle="dropdown">
+                            <i class="fas fa-user-circle me-2"></i>
+                            <span class="d-none d-md-inline">{{ Auth::user()->nom_complet ?? 'Gestionnaire' }}</span>
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li><h6 class="dropdown-header">{{ Auth::user()->nom_complet ?? 'Gestionnaire' }}</h6></li>
+                            <li><span class="dropdown-item-text small text-muted">{{ Auth::user()->email ?? '' }}</span></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li>
+                                <form method="POST" action="{{ route('logout') }}" class="d-inline">
+                                    @csrf
+                                    <button type="submit" class="dropdown-item">
+                                        <i class="fas fa-sign-out-alt me-2"></i>Déconnexion
+                                    </button>
+                                </form>
+                            </li>
                         </ul>
-                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                     </div>
-                @endif
+                </div>
+            </div>
+        </nav>
+    </header>
 
-                <!-- Page Content -->
-                @yield('content')
-            </main>
+    <!-- Sidebar Desktop -->
+    <nav class="sidebar-desktop d-none d-lg-block">
+        <div class="sidebar-logo">
+            <div class="d-flex align-items-center justify-content-center mb-2">
+            <img src="{{ asset('image/bg.jpg') }}" alt="Logo" style="width: 100px; height: 85px; border-radius: 50%;">
+                
+            </div>
+            <small>Gestionnaire</small>
+        </div>
+
+        <ul class="nav flex-column sidebar-nav">
+            <li class="nav-item">
+                <a class="nav-link {{ request()->routeIs('gestionnaire.dashboard') ? 'active' : '' }}" 
+                   href="{{ route('gestionnaire.dashboard') }}">
+                    <i class="fas fa-tachometer-alt"></i>
+                    Tableau de bord
+                </a>
+            </li>
+            
+            <li class="nav-item">
+                <a class="nav-link {{ request()->routeIs('gestionnaire.membres.*') ? 'active' : '' }}" 
+                   href="{{ route('gestionnaire.membres.index') }}">
+                    <i class="fas fa-users"></i>
+                    Membres Éleveurs
+                </a>
+            </li>
+
+            <li class="nav-item">
+                <a class="nav-link {{ request()->routeIs('gestionnaire.receptions.*') ? 'active' : '' }}" 
+                   href="{{ route('gestionnaire.receptions.index') }}">
+                    <i class="fas fa-tint"></i>
+                    Réceptions de Lait
+                </a>
+            </li>
+            
+            <li class="nav-item">
+                <a class="nav-link {{ request()->routeIs('gestionnaire.stock.*') ? 'active' : '' }}" 
+                   href="{{ route('gestionnaire.stock.index') }}">
+                    <i class="fas fa-warehouse"></i>
+                    Gestion du Stock
+                </a>
+            </li>
+            
+            <li class="nav-item">
+                <a class="nav-link {{ request()->routeIs('gestionnaire.livraisons.*') ? 'active' : '' }}" 
+                   href="{{ route('gestionnaire.livraisons.index') }}">
+                    <i class="fas fa-truck"></i>
+                    Livraisons Usine
+                </a>
+            </li>
+            
+            <li class="nav-item">
+                <a class="nav-link {{ request()->routeIs('gestionnaire.paiements.*') && !request()->routeIs('gestionnaire.paiements-eleveurs.*') ? 'active' : '' }}" 
+                   href="{{ route('gestionnaire.paiements.index') }}">
+                    <i class="fas fa-money-bill"></i>
+                    Paiements Usine
+                </a>
+            </li>
+
+            <li class="nav-item">
+                <a class="nav-link {{ request()->routeIs('gestionnaire.paiements-eleveurs.*') ? 'active' : '' }}" 
+                   href="{{ route('gestionnaire.paiements-eleveurs.index') }}">
+                    <i class="fas fa-hand-holding-usd"></i>
+                    Paiements Éleveurs
+                </a>
+            </li>
+
+            <hr style="border-color: rgba(255,255,255,0.2); margin: 20px 16px;">
+            
+            <li class="nav-item">
+                <form method="POST" action="{{ route('logout') }}" class="px-3">
+                    @csrf
+                    <button type="submit" class="btn btn-outline-light logout-btn w-100 text-start">
+                        <i class="fas fa-sign-out-alt me-3"></i>
+                        Déconnexion
+                    </button>
+                </form>
+            </li>
+        </ul>
+    </nav>
+
+    <!-- Sidebar Mobile (Offcanvas) -->
+    <div class="offcanvas offcanvas-start sidebar-mobile" tabindex="-1" id="sidebarMobile">
+        <div class="offcanvas-header border-bottom" style="border-color: rgba(255,255,255,0.2) !important;">
+            <div class="sidebar-logo w-100">
+                <div class="d-flex align-items-center justify-content-center mb-2">
+                    <i class="fas fa-seedling text-white me-2" style="font-size: 1.8rem;"></i>
+                    <h4>SGCCL</h4>
+                </div>
+                <small>Gestionnaire</small>
+            </div>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas"></button>
+        </div>
+        
+        <div class="offcanvas-body p-0">
+            <ul class="nav flex-column sidebar-nav">
+                <li class="nav-item">
+                    <a class="nav-link {{ request()->routeIs('gestionnaire.dashboard') ? 'active' : '' }}" 
+                       href="{{ route('gestionnaire.dashboard') }}"
+                       data-bs-dismiss="offcanvas">
+                        <i class="fas fa-tachometer-alt"></i>
+                        Tableau de bord
+                    </a>
+                </li>
+                
+                <li class="nav-item">
+                    <a class="nav-link {{ request()->routeIs('gestionnaire.membres.*') ? 'active' : '' }}" 
+                       href="{{ route('gestionnaire.membres.index') }}"
+                       data-bs-dismiss="offcanvas">
+                        <i class="fas fa-users"></i>
+                        Membres Éleveurs
+                    </a>
+                </li>
+
+                <li class="nav-item">
+                    <a class="nav-link {{ request()->routeIs('gestionnaire.receptions.*') ? 'active' : '' }}" 
+                       href="{{ route('gestionnaire.receptions.index') }}"
+                       data-bs-dismiss="offcanvas">
+                        <i class="fas fa-tint"></i>
+                        Réceptions de Lait
+                    </a>
+                </li>
+                
+                <li class="nav-item">
+                    <a class="nav-link {{ request()->routeIs('gestionnaire.stock.*') ? 'active' : '' }}" 
+                       href="{{ route('gestionnaire.stock.index') }}"
+                       data-bs-dismiss="offcanvas">
+                        <i class="fas fa-warehouse"></i>
+                        Gestion du Stock
+                    </a>
+                </li>
+                
+                <li class="nav-item">
+                    <a class="nav-link {{ request()->routeIs('gestionnaire.livraisons.*') ? 'active' : '' }}" 
+                       href="{{ route('gestionnaire.livraisons.index') }}"
+                       data-bs-dismiss="offcanvas">
+                        <i class="fas fa-truck"></i>
+                        Livraisons Usine
+                    </a>
+                </li>
+                
+                <li class="nav-item">
+                    <a class="nav-link {{ request()->routeIs('gestionnaire.paiements.*') && !request()->routeIs('gestionnaire.paiements-eleveurs.*') ? 'active' : '' }}" 
+                       href="{{ route('gestionnaire.paiements.index') }}"
+                       data-bs-dismiss="offcanvas">
+                        <i class="fas fa-money-bill"></i>
+                        Paiements Usine
+                    </a>
+                </li>
+
+                <li class="nav-item">
+                    <a class="nav-link {{ request()->routeIs('gestionnaire.paiements-eleveurs.*') ? 'active' : '' }}" 
+                       href="{{ route('gestionnaire.paiements-eleveurs.index') }}"
+                       data-bs-dismiss="offcanvas">
+                        <i class="fas fa-hand-holding-usd"></i>
+                        Paiements Éleveurs
+                    </a>
+                </li>
+
+                <hr style="border-color: rgba(255,255,255,0.2); margin: 20px 16px;">
+                
+                <li class="nav-item">
+                    <form method="POST" action="{{ route('logout') }}" class="px-3">
+                        @csrf
+                        <button type="submit" class="btn btn-outline-light logout-btn w-100 text-start">
+                            <i class="fas fa-sign-out-alt me-3"></i>
+                            Déconnexion
+                        </button>
+                    </form>
+                </li>
+            </ul>
         </div>
     </div>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <!-- Page Header -->
+        <div class="page-header">
+            <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center">
+                <h1>@yield('page-title', 'Dashboard')</h1>
+                <div class="btn-toolbar">
+                    <div class="btn-group me-2">
+                        @yield('page-actions')
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Alerts -->
+        @if(session('success'))
+            <div class="alert alert-success alert-dismissible fade show" role="alert">
+                <i class="fas fa-check-circle me-2"></i>
+                {{ session('success') }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        @endif
+
+        @if(session('error'))
+            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                <i class="fas fa-exclamation-circle me-2"></i>
+                {{ session('error') }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        @endif
+
+        @if(session('info'))
+            <div class="alert alert-info alert-dismissible fade show" role="alert">
+                <i class="fas fa-info-circle me-2"></i>
+                {{ session('info') }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        @endif
+
+        @if($errors->any())
+            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                <i class="fas fa-exclamation-triangle me-2"></i>
+                <strong>Erreurs détectées :</strong>
+                <ul class="mb-0 mt-2">
+                    @foreach($errors->all() as $error)
+                        <li>{{ $error }}</li>
+                    @endforeach
+                </ul>
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        @endif
+
+        <!-- Page Content -->
+        @yield('content')
+    </main>
 
     <!-- Toast Container -->
     <div class="toast-container"></div>
@@ -264,6 +539,17 @@
                 window.axios.defaults.headers.common = window.axios.defaults.headers.common || {};
                 window.axios.defaults.headers.common['X-CSRF-TOKEN'] = token.getAttribute('content');
             }
+
+            // Close mobile sidebar when clicking on nav links
+            const sidebarLinks = document.querySelectorAll('#sidebarMobile .nav-link');
+            sidebarLinks.forEach(link => {
+                link.addEventListener('click', function() {
+                    const offcanvas = bootstrap.Offcanvas.getInstance(document.getElementById('sidebarMobile'));
+                    if (offcanvas) {
+                        offcanvas.hide();
+                    }
+                });
+            });
         });
 
         // Show toast notification
